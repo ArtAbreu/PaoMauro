@@ -9,12 +9,14 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+ codex/develop-web-system-for-bread-delivery-f4dix1
     <link
         rel="stylesheet"
         href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-o9N1j7kG9z8zcb2Yh3lPjUuyPz7Fu7zyFFf0zPBC3uU="
         crossorigin=""
     />
+ main
 </head>
 <body>
     <header class="app-header">
@@ -37,37 +39,11 @@
                     <span class="label">Concluídas Hoje</span>
                     <span class="value" id="summaryToday">0</span>
                 </div>
-                <div class="summary-item">
-                    <span class="label">Paradas pendentes</span>
-                    <span class="value" id="summaryPendingStops">0</span>
-                </div>
-                <div class="summary-item">
-                    <span class="label">Paradas hoje</span>
-                    <span class="value" id="summaryStopsToday">0</span>
-                </div>
-                <div class="summary-item">
-                    <span class="label">Entregas por parada</span>
-                    <span class="value" id="summaryStopsDelivered">0</span>
-                </div>
             </div>
             <div class="charts">
                 <h3>Pães entregues (últimos 14 dias)</h3>
                 <canvas id="breadsChart"></canvas>
             </div>
-        </section>
-
-        <section class="card" id="stops">
-            <div class="section-header">
-                <h2>Alertas de parada automática</h2>
-                <div class="stop-actions">
-                    <span class="badge" id="stopAlertBadge">0</span>
-                    <button id="refreshStops" class="secondary">Atualizar</button>
-                </div>
-            </div>
-            <p class="muted">
-                Quando o motorista permanecer parado próximo a um cliente cadastrado, o sistema sugere registrar a entrega.
-            </p>
-            <div id="stopAlerts" class="stop-alerts"></div>
         </section>
 
         <section class="card" id="clients">
@@ -128,6 +104,7 @@
                     <input type="number" id="startLon" step="0.000001" placeholder="-46.63" />
                 </label>
             </div>
+codex/develop-web-system-for-bread-delivery-f4dix1
             <div class="route-selection">
                 <div class="route-selection__header">
                     <div>
@@ -149,6 +126,9 @@
             </div>
             <ol id="routeList"></ol>
             <div id="routeWarnings" class="route-warnings"></div>
+
+            <ol id="routeList"></ol>
+ main
         </section>
 
         <section class="card" id="deliveries">
@@ -200,12 +180,15 @@
         </tr>
     </template>
 
+ codex/develop-web-system-for-bread-delivery-f4dix1
     <script
         src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-o9N1j7kG9z8zcb2Yh3lPjUuyPz7Fu7zyFFf0zPBC3uU="
         crossorigin=""
         defer
     ></script>
+
+ main
     <script src="/app.js" defer></script>
     <script src="/chart.js" defer></script>
 </body>

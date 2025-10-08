@@ -65,8 +65,6 @@ O sistema permitirá que o administrador cadastre clientes, organize rotas diár
   - `id`, `route_id`, `timestamp`, `latitude`, `longitude`, `speed` (opcional), `battery_level` (opcional).
 - `deliveries`
   - `id`, `route_stop_id`, `delivered_quantity`, `returned_quantity`, `confirmation_photo_url` (futuro), `created_at`.
-- `stop_events`
-  - `id`, `route_id`, `client_id`, `location_id`, `triggered_at`, `acknowledged_at`, `delivered_quantity`, `delivered`, `notes`.
 
 ### 4.2 Índices e extensões
 - Adicionar PostGIS para suportar tipos `geography(Point)` e cálculos de distância.
@@ -103,8 +101,6 @@ O sistema permitirá que o administrador cadastre clientes, organize rotas diár
 - `POST /routes/:id/locations` (stream de localização)
 - `POST /routes/:id/stops/:stopId/arrive`
 - `POST /routes/:id/stops/:stopId/deliver` (recebe quantidade, observação)
-- `GET /driver/stops?status=` (listar alertas de parada detectados automaticamente)
-- `POST /driver/stops/:id/ack` (confirmar/descartar parada e registrar entrega)
 - `GET /reports/daily`, `GET /reports/export?type=csv`
 
 ## 7. Notificações e automações futuras

@@ -1,19 +1,17 @@
 const API_BASE = '/api';
+ codex/develop-web-system-for-bread-delivery-f4dix1
 const DEFAULT_START = { latitude: -23.55052, longitude: -46.633308 };
-const STOP_POLL_INTERVAL = 20000;
 
 let map;
 let markersLayer;
 let routeLayer;
-let stopLayer;
 const markerByClientId = new Map();
 const checkboxByClientId = new Map();
 let cachedClients = [];
 const selectedClientIds = new Set();
 let hasAutoSelectedClients = false;
 let routeUpdateTimeout;
-let stopPollTimer;
-let pendingStopEvents = [];
+ main
 
 async function fetchJSON(url, options = {}) {
     const response = await fetch(url, {
@@ -47,33 +45,7 @@ function serializeForm(form) {
     return payload;
 }
 
-function formatDistance(meters) {
-    if (meters == null) return '---';
-    const value = Number(meters);
-    if (Number.isNaN(value)) return '---';
-    if (value < 1000) {
-        return `${value.toFixed(0)} m`;
-    }
-    return `${(value / 1000).toFixed(2)} km`;
-}
-
-function formatDuration(seconds) {
-    if (seconds == null) return '-';
-    const value = Number(seconds);
-    if (Number.isNaN(value) || value < 0) return '-';
-    const minutes = Math.floor(value / 60);
-    if (minutes === 0) {
-        return `${value.toFixed(0)} s`;
-    }
-    const remaining = value % 60;
-    if (minutes < 60) {
-        return `${minutes} min${remaining >= 30 ? ' e 30 s' : ''}`;
-    }
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${hours}h ${mins}min`;
-}
-
+codex/develop-web-system-for-bread-delivery-f4dix1
 function initMap() {
     const mapContainer = document.getElementById('map');
     if (!mapContainer || typeof L === 'undefined') {
@@ -90,7 +62,6 @@ function initMap() {
     }).addTo(map);
     markersLayer = L.layerGroup().addTo(map);
     routeLayer = L.layerGroup().addTo(map);
-    stopLayer = L.layerGroup().addTo(map);
 }
 
 function getMarkerStyle(clientId) {
@@ -321,149 +292,21 @@ function showRouteWarnings(skipped) {
     container.style.display = 'block';
 }
 
-function focusStopOnMap(event) {
-    if (!map || !stopLayer) return;
-    stopLayer.clearLayers();
-    const lat = Number(event.position_latitude ?? event.latitude);
-    const lon = Number(event.position_longitude ?? event.longitude);
-    if (Number.isNaN(lat) || Number.isNaN(lon)) return;
-    const highlight = L.circleMarker([lat, lon], {
-        radius: 14,
-        color: '#facc15',
-        weight: 3,
-        fillColor: '#fde047',
-        fillOpacity: 0.6,
-    });
-    highlight.addTo(stopLayer);
-    map.setView([lat, lon], 16);
-    if (event.client_id && markerByClientId.has(Number(event.client_id))) {
-        markerByClientId.get(Number(event.client_id)).openPopup();
-    }
-}
-
-function renderStopEvents(events) {
-    const container = document.getElementById('stopAlerts');
-    const badge = document.getElementById('stopAlertBadge');
-    if (!container) return;
-    pendingStopEvents = Array.isArray(events) ? events : [];
-    container.innerHTML = '';
-
-    if (!pendingStopEvents.length) {
-        container.classList.remove('has-items');
-        if (badge) badge.textContent = '0';
-        const empty = document.createElement('p');
-        empty.className = 'empty-state';
-        empty.textContent = 'Nenhuma parada detectada.';
-        container.appendChild(empty);
-        if (stopLayer) stopLayer.clearLayers();
-        return;
-    }
-
-    container.classList.add('has-items');
-    if (badge) badge.textContent = String(pendingStopEvents.length);
-
-    pendingStopEvents.forEach((event) => {
-        const card = document.createElement('article');
-        card.className = 'stop-card';
-
-        const title = document.createElement('h4');
-        title.textContent = event.client_name || 'Cliente não identificado';
-        card.appendChild(title);
-
-        const meta = document.createElement('p');
-        meta.className = 'stop-card__meta';
-        const distanceLabel = formatDistance(event.distance_m);
-        const durationLabel = formatDuration(event.duration_seconds);
-        meta.textContent = `${distanceLabel} do cliente • parado há ${durationLabel}`;
-        card.appendChild(meta);
-
-        if (event.client_address) {
-            const address = document.createElement('p');
-            address.className = 'stop-card__address';
-            address.textContent = event.client_address;
-            card.appendChild(address);
-        }
-
-        if (event.triggered_at) {
-            const triggered = document.createElement('small');
-            const triggeredDate = new Date(event.triggered_at.replace(' ', 'T'));
-            triggered.textContent = `Detectado às ${triggeredDate.toLocaleTimeString('pt-BR', {
-                hour: '2-digit',
-                minute: '2-digit',
-            })}`;
-            card.appendChild(triggered);
-        }
-
-        const actions = document.createElement('div');
-        actions.className = 'stop-card__actions';
-
-        const confirmBtn = document.createElement('button');
-        confirmBtn.type = 'button';
-        confirmBtn.textContent = 'Registrar entrega';
-        confirmBtn.addEventListener('click', () => ackStopEvent(event.id, true));
-        actions.appendChild(confirmBtn);
-
-        const skipBtn = document.createElement('button');
-        skipBtn.type = 'button';
-        skipBtn.className = 'secondary';
-        skipBtn.textContent = 'Ignorar parada';
-        skipBtn.addEventListener('click', () => ackStopEvent(event.id, false));
-        actions.appendChild(skipBtn);
-
-        const focusBtn = document.createElement('button');
-        focusBtn.type = 'button';
-        focusBtn.className = 'ghost';
-        focusBtn.textContent = 'Ver no mapa';
-        focusBtn.addEventListener('click', () => focusStopOnMap(event));
-        actions.appendChild(focusBtn);
-
-        card.appendChild(actions);
-        container.appendChild(card);
-    });
-}
-
-async function loadStopEvents() {
-    const response = await fetchJSON(`${API_BASE}/driver/stops?status=pending`);
-    renderStopEvents(response.events || []);
-    return response.events;
-}
-
-async function ackStopEvent(eventId, delivered) {
-    const payload = { delivered };
-    if (delivered) {
-        const quantity = prompt('Quantos pães foram deixados neste ponto?');
-        if (quantity === null) return;
-        const parsed = Number(quantity);
-        if (!Number.isFinite(parsed) || parsed < 0) {
-            alert('Informe um número válido de pães.');
-            return;
-        }
-        payload.quantity = parsed;
-        const notes = prompt('Alguma observação adicional? (opcional)');
-        if (notes) payload.notes = notes;
-    }
-    await fetchJSON(`${API_BASE}/driver/stops/${eventId}/ack`, {
-        method: 'POST',
-        body: JSON.stringify(payload),
-    });
-    await Promise.all([loadStopEvents(), loadSummary(), loadDeliveries(), generateRoute()]);
-}
-
-function startStopPolling() {
-    clearInterval(stopPollTimer);
-    loadStopEvents();
-    stopPollTimer = setInterval(loadStopEvents, STOP_POLL_INTERVAL);
-}
-
 async function loadClients() {
     const clients = await fetchJSON(`${API_BASE}/clients`);
     cachedClients = clients;
 
+
+async function loadClients() {
+    const clients = await fetchJSON(`${API_BASE}/clients`);
+ main
     const tbody = document.querySelector('#clientsTable tbody');
     const select = document.querySelector('#deliveryClient');
     tbody.innerHTML = '';
     select.innerHTML = '<option value="">Selecione...</option>';
+ codex/develop-web-system-for-bread-delivery-f4dix1
 
+ main
     clients.forEach((client) => {
         const row = document.createElement('tr');
         row.innerHTML = `
@@ -480,6 +323,7 @@ async function loadClients() {
         option.textContent = client.name;
         select.appendChild(option);
     });
+ codex/develop-web-system-for-bread-delivery-f4dix1
 
     if (!hasAutoSelectedClients && clients.length) {
         const withCoordinates = clients.filter(
@@ -509,6 +353,7 @@ async function loadClients() {
     renderRouteClients(clients);
     renderClientsOnMap(clients);
     return clients;
+ main
 }
 
 async function loadDeliveries() {
@@ -525,9 +370,14 @@ async function loadDeliveries() {
         fragment.querySelector('.delivery-date').textContent = delivery.scheduled_date;
         fragment.querySelector('.delivery-status').textContent = delivery.status;
         fragment.querySelector('.delivery-quantity').textContent = delivery.quantity ?? '-';
+codex/develop-web-system-for-bread-delivery-f4dix1
         fragment
             .querySelector('.complete-delivery')
             .addEventListener('click', () => completeDelivery(delivery.id));
+
+        fragment.querySelector('.complete-delivery').dataset.id = delivery.id;
+        fragment.querySelector('.complete-delivery').addEventListener('click', () => completeDelivery(delivery.id));
+ main
         tbody.appendChild(fragment);
     });
 }
@@ -537,14 +387,7 @@ async function loadSummary() {
     document.querySelector('#summaryClients').textContent = summary.totals.clients;
     document.querySelector('#summaryDeliveries').textContent = summary.totals.deliveries;
     document.querySelector('#summaryToday').textContent = summary.totals.completed_today;
-    if (summary.stops) {
-        const pending = document.querySelector('#summaryPendingStops');
-        const triggeredToday = document.querySelector('#summaryStopsToday');
-        const deliveredToday = document.querySelector('#summaryStopsDelivered');
-        if (pending) pending.textContent = summary.stops.pending;
-        if (triggeredToday) triggeredToday.textContent = summary.stops.triggered_today;
-        if (deliveredToday) deliveredToday.textContent = summary.stops.delivered_today;
-    }
+ codex/develop-web-system-for-bread-delivery-f4dix1
     renderBarChart(
         'breadsChart',
         summary.breads_by_day.map((item) => ({
@@ -615,6 +458,32 @@ async function generateRoute() {
         list.appendChild(item);
         showRouteWarnings([]);
     }
+
+    renderBarChart('breadsChart', summary.breads_by_day.map((item) => ({
+        label: item.day,
+        value: item.breads,
+    })));
+}
+
+async function generateRoute() {
+    const date = document.querySelector('#routeDate').value;
+    const startLat = Number(document.querySelector('#startLat').value) || undefined;
+    const startLon = Number(document.querySelector('#startLon').value) || undefined;
+    const payload = { date };
+    if (!Number.isNaN(startLat)) payload.start_latitude = startLat;
+    if (!Number.isNaN(startLon)) payload.start_longitude = startLon;
+    const route = await fetchJSON(`${API_BASE}/routes`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+    });
+    const list = document.querySelector('#routeList');
+    list.innerHTML = '';
+    route.forEach((stop, index) => {
+        const item = document.createElement('li');
+        item.innerHTML = `<strong>${index + 1}. ${stop.name}</strong><br><small>${stop.address || ''}</small>`;
+        list.appendChild(item);
+    });
+ main
 }
 
 async function completeDelivery(id) {
@@ -654,8 +523,10 @@ function setupInstallPrompt() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+codex/develop-web-system-for-bread-delivery-f4dix1
     initMap();
 
+ main
     const clientForm = document.getElementById('clientForm');
     clientForm.addEventListener('submit', async (event) => {
         event.preventDefault();
@@ -666,7 +537,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         clientForm.reset();
         await loadClients();
+codex/develop-web-system-for-bread-delivery-f4dix1
         await generateRoute();
+ main
     });
 
     const deliveryForm = document.getElementById('deliveryForm');
@@ -678,6 +551,7 @@ document.addEventListener('DOMContentLoaded', () => {
             body: JSON.stringify(payload),
         });
         deliveryForm.reset();
+codex/develop-web-system-for-bread-delivery-f4dix1
         await Promise.all([loadDeliveries(), loadSummary(), generateRoute()]);
     });
 
@@ -686,6 +560,12 @@ document.addEventListener('DOMContentLoaded', () => {
         await generateRoute();
     });
 
+
+        await Promise.all([loadDeliveries(), loadSummary()]);
+    });
+
+    document.getElementById('refreshClients').addEventListener('click', loadClients);
+ main
     document.getElementById('refreshDeliveries').addEventListener('click', loadDeliveries);
     document.getElementById('generateRoute').addEventListener('click', generateRoute);
     document.getElementById('routeDate').addEventListener('change', () => {
@@ -693,24 +573,23 @@ document.addEventListener('DOMContentLoaded', () => {
         generateRoute();
     });
 
+codex/develop-web-system-for-bread-delivery-f4dix1
     document.getElementById('selectIdeal').addEventListener('click', () => {
         const countInput = document.getElementById('idealCount');
         const count = Number(countInput.value) || 3;
         selectIdealClients(count);
     });
 
-    const refreshStops = document.getElementById('refreshStops');
-    if (refreshStops) {
-        refreshStops.addEventListener('click', () => {
-            loadStopEvents();
-        });
-    }
-
     registerServiceWorker();
     setupInstallPrompt();
 
     loadClients().then(() => generateRoute());
+
+    registerServiceWorker();
+    setupInstallPrompt();
+
+    loadClients();
+main
     loadDeliveries();
     loadSummary();
-    startStopPolling();
 });
