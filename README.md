@@ -54,6 +54,8 @@ O backend grava o banco SQLite localmente (`backend/delivery.db`). Em planos gra
 | `POST` | `/api/deliveries/:id/complete` | Marca entrega como concluída e registra quantidade. |
 | `POST` | `/api/routes` | Gera rota otimizada para o dia usando heurística de vizinho mais próximo. |
 | `POST` | `/api/driver/location` | Registra localização do motorista (GPS). |
+| `GET` | `/api/driver/stops` | Lista alertas automáticos de parada pendentes ou confirmados. |
+| `POST` | `/api/driver/stops/:id/ack` | Confirma ou descarta uma parada detectada (com quantidade entregue opcional). |
 | `GET` | `/api/metrics/summary` | Resumo com métricas de clientes, entregas e pães. |
 
 ## Funcionalidades em destaque
@@ -61,9 +63,16 @@ O backend grava o banco SQLite localmente (`backend/delivery.db`). Em planos gra
 - Planejamento de rota com base em coordenadas armazenadas para cada cliente.
 - Mapa interativo com Leaflet mostrando todos os clientes e permitindo selecionar rapidamente quais paradas entram na rota (inclui os 5 supermercados Ideal já cadastrados com geolocalização).
 - Registro de entregas com quantidade de pães e observações.
+- Detecção automática de paradas próximas aos clientes cadastrados com sugestão imediata para registrar a entrega e quantidade de pães.
 - Painel de métricas com gráfico simples (canvas) para visualizar pães entregues nos últimos dias.
 - PWA com manifesto e service worker para uso offline básico e instalação no celular.
 - Armazenamento seguro dos dados em banco SQLite local.
+
+## Detecção automática de paradas
+
+- Cada atualização de localização (`/api/driver/location`) é comparada com o ponto anterior. Se o motorista permanecer a menos de 50 metros por pelo menos 2 minutos, o sistema avalia os clientes em um raio de 250 metros.
+- Ao encontrar o cliente mais próximo, o backend cria um `stop_event` pendente e o frontend exibe um alerta com ações rápidas.
+- O administrador pode confirmar a entrega (informando quantidade de pães e observações) ou ignorar a parada. Confirmações automáticas atualizam/geram registros em `deliveries` e alimentam o painel de métricas.
 
 ## Próximos passos sugeridos
 

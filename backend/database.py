@@ -33,6 +33,20 @@ CREATE TABLE IF NOT EXISTS driver_positions (
     latitude REAL NOT NULL,
     longitude REAL NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS stop_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    position_id INTEGER NOT NULL,
+    client_id INTEGER,
+    distance_m REAL,
+    triggered_at TEXT DEFAULT (datetime('now')),
+    acknowledged_at TEXT,
+    delivered_quantity INTEGER,
+    delivered INTEGER,
+    notes TEXT,
+    FOREIGN KEY (position_id) REFERENCES driver_positions(id),
+    FOREIGN KEY (client_id) REFERENCES clients(id)
+);
 """
 
 IDEAL_SUPERMARKETS = (
