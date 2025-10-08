@@ -48,7 +48,9 @@ Este repositório contém uma aplicação web completa (backend em Python + fron
 ## Funcionalidades em destaque
 
 - Planejamento de rota com base em coordenadas armazenadas para cada cliente.
+codex/develop-web-system-for-bread-delivery-f4dix1
 - Mapa interativo com Leaflet mostrando todos os clientes e permitindo selecionar rapidamente quais paradas entram na rota (inclui os 5 supermercados Ideal já cadastrados com geolocalização).
+
 - Registro de entregas com quantidade de pães e observações.
 - Painel de métricas com gráfico simples (canvas) para visualizar pães entregues nos últimos dias.
 - PWA com manifesto e service worker para uso offline básico e instalação no celular.

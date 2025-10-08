@@ -1,7 +1,10 @@
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+codex/develop-web-system-for-bread-delivery-f4dix1
 from typing import Dict, Iterable, List, Tuple
+from typing import Dict, Tuple
+
 from urllib.parse import parse_qs, urlparse
 
 from database import execute, fetch_all, fetch_one, initialize
@@ -189,6 +192,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(json.dumps({"status": "ok"}).encode())
 
     def generate_route(self, payload: Dict) -> None:
+codex/develop-web-system-for-bread-delivery-f4dix1
         start_lat = self._parse_float(payload.get("start_latitude"), DEFAULT_START[0])
         start_lon = self._parse_float(payload.get("start_longitude"), DEFAULT_START[1])
         date = payload.get("date")
@@ -284,15 +288,28 @@ class RequestHandler(BaseHTTPRequestHandler):
             "clients.name as client_name FROM deliveries JOIN clients ON deliveries.client_id = clients.id "
             "WHERE deliveries.status != 'completed'"
         )
+
+        start_lat = payload.get("start_latitude", DEFAULT_START[0])
+        start_lon = payload.get("start_longitude", DEFAULT_START[1])
+        date = payload.get("date")
+        query = "SELECT clients.*, deliveries.id as delivery_id, deliveries.status, deliveries.scheduled_date FROM deliveries JOIN clients ON deliveries.client_id = clients.id WHERE deliveries.status != 'completed'"
+ main
         params: Tuple = ()
         if date:
             query += " AND deliveries.scheduled_date = ?"
             params = (date,)
+codex/develop-web-system-for-bread-delivery-f4dix1
         query += " ORDER BY deliveries.scheduled_date ASC, deliveries.id ASC"
         results = fetch_all(query, params)
         for client in results:
             client.setdefault("client_id", client.get("id"))
         return results
+
+        clients = fetch_all(query, params)
+        ordered = nearest_neighbor_route((start_lat, start_lon), clients)
+        self._set_headers(200)
+        self.wfile.write(json.dumps(ordered).encode())
+ main
 
     def build_metrics_summary(self) -> Dict:
         total_clients = fetch_one("SELECT COUNT(*) as total FROM clients", ())["total"]

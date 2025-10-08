@@ -1,4 +1,5 @@
 const API_BASE = '/api';
+ codex/develop-web-system-for-bread-delivery-f4dix1
 const DEFAULT_START = { latitude: -23.55052, longitude: -46.633308 };
 
 let map;
@@ -10,6 +11,7 @@ let cachedClients = [];
 const selectedClientIds = new Set();
 let hasAutoSelectedClients = false;
 let routeUpdateTimeout;
+ main
 
 async function fetchJSON(url, options = {}) {
     const response = await fetch(url, {
@@ -43,6 +45,7 @@ function serializeForm(form) {
     return payload;
 }
 
+codex/develop-web-system-for-bread-delivery-f4dix1
 function initMap() {
     const mapContainer = document.getElementById('map');
     if (!mapContainer || typeof L === 'undefined') {
@@ -293,11 +296,17 @@ async function loadClients() {
     const clients = await fetchJSON(`${API_BASE}/clients`);
     cachedClients = clients;
 
+
+async function loadClients() {
+    const clients = await fetchJSON(`${API_BASE}/clients`);
+ main
     const tbody = document.querySelector('#clientsTable tbody');
     const select = document.querySelector('#deliveryClient');
     tbody.innerHTML = '';
     select.innerHTML = '<option value="">Selecione...</option>';
+ codex/develop-web-system-for-bread-delivery-f4dix1
 
+ main
     clients.forEach((client) => {
         const row = document.createElement('tr');
         row.innerHTML = `
@@ -314,6 +323,7 @@ async function loadClients() {
         option.textContent = client.name;
         select.appendChild(option);
     });
+ codex/develop-web-system-for-bread-delivery-f4dix1
 
     if (!hasAutoSelectedClients && clients.length) {
         const withCoordinates = clients.filter(
@@ -343,6 +353,7 @@ async function loadClients() {
     renderRouteClients(clients);
     renderClientsOnMap(clients);
     return clients;
+ main
 }
 
 async function loadDeliveries() {
@@ -359,9 +370,14 @@ async function loadDeliveries() {
         fragment.querySelector('.delivery-date').textContent = delivery.scheduled_date;
         fragment.querySelector('.delivery-status').textContent = delivery.status;
         fragment.querySelector('.delivery-quantity').textContent = delivery.quantity ?? '-';
+codex/develop-web-system-for-bread-delivery-f4dix1
         fragment
             .querySelector('.complete-delivery')
             .addEventListener('click', () => completeDelivery(delivery.id));
+
+        fragment.querySelector('.complete-delivery').dataset.id = delivery.id;
+        fragment.querySelector('.complete-delivery').addEventListener('click', () => completeDelivery(delivery.id));
+ main
         tbody.appendChild(fragment);
     });
 }
@@ -371,6 +387,7 @@ async function loadSummary() {
     document.querySelector('#summaryClients').textContent = summary.totals.clients;
     document.querySelector('#summaryDeliveries').textContent = summary.totals.deliveries;
     document.querySelector('#summaryToday').textContent = summary.totals.completed_today;
+ codex/develop-web-system-for-bread-delivery-f4dix1
     renderBarChart(
         'breadsChart',
         summary.breads_by_day.map((item) => ({
@@ -441,6 +458,32 @@ async function generateRoute() {
         list.appendChild(item);
         showRouteWarnings([]);
     }
+
+    renderBarChart('breadsChart', summary.breads_by_day.map((item) => ({
+        label: item.day,
+        value: item.breads,
+    })));
+}
+
+async function generateRoute() {
+    const date = document.querySelector('#routeDate').value;
+    const startLat = Number(document.querySelector('#startLat').value) || undefined;
+    const startLon = Number(document.querySelector('#startLon').value) || undefined;
+    const payload = { date };
+    if (!Number.isNaN(startLat)) payload.start_latitude = startLat;
+    if (!Number.isNaN(startLon)) payload.start_longitude = startLon;
+    const route = await fetchJSON(`${API_BASE}/routes`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+    });
+    const list = document.querySelector('#routeList');
+    list.innerHTML = '';
+    route.forEach((stop, index) => {
+        const item = document.createElement('li');
+        item.innerHTML = `<strong>${index + 1}. ${stop.name}</strong><br><small>${stop.address || ''}</small>`;
+        list.appendChild(item);
+    });
+ main
 }
 
 async function completeDelivery(id) {
@@ -480,8 +523,10 @@ function setupInstallPrompt() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+codex/develop-web-system-for-bread-delivery-f4dix1
     initMap();
 
+ main
     const clientForm = document.getElementById('clientForm');
     clientForm.addEventListener('submit', async (event) => {
         event.preventDefault();
@@ -492,7 +537,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         clientForm.reset();
         await loadClients();
+codex/develop-web-system-for-bread-delivery-f4dix1
         await generateRoute();
+ main
     });
 
     const deliveryForm = document.getElementById('deliveryForm');
@@ -504,6 +551,7 @@ document.addEventListener('DOMContentLoaded', () => {
             body: JSON.stringify(payload),
         });
         deliveryForm.reset();
+codex/develop-web-system-for-bread-delivery-f4dix1
         await Promise.all([loadDeliveries(), loadSummary(), generateRoute()]);
     });
 
@@ -512,6 +560,12 @@ document.addEventListener('DOMContentLoaded', () => {
         await generateRoute();
     });
 
+
+        await Promise.all([loadDeliveries(), loadSummary()]);
+    });
+
+    document.getElementById('refreshClients').addEventListener('click', loadClients);
+ main
     document.getElementById('refreshDeliveries').addEventListener('click', loadDeliveries);
     document.getElementById('generateRoute').addEventListener('click', generateRoute);
     document.getElementById('routeDate').addEventListener('change', () => {
@@ -519,6 +573,7 @@ document.addEventListener('DOMContentLoaded', () => {
         generateRoute();
     });
 
+codex/develop-web-system-for-bread-delivery-f4dix1
     document.getElementById('selectIdeal').addEventListener('click', () => {
         const countInput = document.getElementById('idealCount');
         const count = Number(countInput.value) || 3;
@@ -529,6 +584,12 @@ document.addEventListener('DOMContentLoaded', () => {
     setupInstallPrompt();
 
     loadClients().then(() => generateRoute());
+
+    registerServiceWorker();
+    setupInstallPrompt();
+
+    loadClients();
+main
     loadDeliveries();
     loadSummary();
 });
