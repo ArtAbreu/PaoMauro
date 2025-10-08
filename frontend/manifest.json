@@ -1,0 +1,9 @@
+{
+    "name": "Rotas da Fábrica de Pães",
+    "short_name": "Rotas Pães",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#f97316",
+    "theme_color": "#f97316",
+    "icons": []
+}
