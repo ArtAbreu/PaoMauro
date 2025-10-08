@@ -1,7 +1,10 @@
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+codex/develop-web-system-for-bread-delivery-f4dix1
+from typing import Dict, Iterable, List, Tuple
 from typing import Dict, Tuple
+
 from urllib.parse import parse_qs, urlparse
 
 from database import execute, fetch_all, fetch_one, initialize
@@ -189,18 +192,124 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(json.dumps({"status": "ok"}).encode())
 
     def generate_route(self, payload: Dict) -> None:
+codex/develop-web-system-for-bread-delivery-f4dix1
+        start_lat = self._parse_float(payload.get("start_latitude"), DEFAULT_START[0])
+        start_lon = self._parse_float(payload.get("start_longitude"), DEFAULT_START[1])
+        date = payload.get("date")
+        client_ids = payload.get("client_ids") or []
+
+        try:
+            client_ids_iterable: Iterable[int] = tuple(int(cid) for cid in client_ids)
+        except (TypeError, ValueError):
+            client_ids_iterable = ()
+
+        clients = self._fetch_route_candidates(date, client_ids_iterable)
+
+        with_coordinates = [
+            client
+            for client in clients
+            if client.get("latitude") is not None and client.get("longitude") is not None
+        ]
+        missing_coordinates = [
+            client
+            for client in clients
+            if client.get("latitude") is None or client.get("longitude") is None
+        ]
+
+        ordered = nearest_neighbor_route((start_lat, start_lon), with_coordinates)
+
+        response = {
+            "start": {"latitude": start_lat, "longitude": start_lon},
+            "ordered": ordered,
+            "skipped": missing_coordinates,
+        }
+
+        self._set_headers(200)
+        self.wfile.write(json.dumps(response).encode())
+
+    def _parse_float(self, value, default: float) -> float:
+        if value in (None, "", []):
+            return float(default)
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return float(default)
+
+    def _fetch_route_candidates(self, date: str, client_ids: Iterable[int]) -> List[Dict]:
+        client_ids_tuple = tuple(client_ids)
+        if client_ids_tuple:
+            placeholders = ",".join(["?"] * len(client_ids_tuple))
+            clients = fetch_all(
+                f"SELECT * FROM clients WHERE id IN ({placeholders}) ORDER BY name",
+                client_ids_tuple,
+            )
+            deliveries_params: Tuple = client_ids_tuple
+            deliveries_query = (
+                "SELECT deliveries.*, clients.name as client_name FROM deliveries "
+                "JOIN clients ON clients.id = deliveries.client_id "
+                f"WHERE deliveries.client_id IN ({placeholders}) AND deliveries.status != 'completed'"
+            )
+            if date:
+                deliveries_query += " AND deliveries.scheduled_date = ?"
+                deliveries_params = client_ids_tuple + (date,)
+            deliveries = fetch_all(deliveries_query, deliveries_params)
+            delivery_map = {}
+            for delivery in deliveries:
+                delivery_map.setdefault(delivery["client_id"], delivery)
+
+            enriched: List[Dict] = []
+            for client in clients:
+                entry = dict(client)
+                delivery = delivery_map.get(client["id"])
+                if delivery:
+                    entry.update(
+                        {
+                            "delivery_id": delivery["id"],
+                            "status": delivery["status"],
+                            "scheduled_date": delivery["scheduled_date"],
+                            "client_name": delivery["client_name"],
+                        }
+                    )
+                else:
+                    entry.update(
+                        {
+                            "delivery_id": None,
+                            "status": "pending",
+                            "scheduled_date": date,
+                            "client_name": client["name"],
+                        }
+                    )
+                entry.setdefault("client_id", entry.get("id"))
+                enriched.append(entry)
+            return enriched
+
+        query = (
+            "SELECT clients.*, deliveries.id as delivery_id, deliveries.status, deliveries.scheduled_date, "
+            "clients.name as client_name FROM deliveries JOIN clients ON deliveries.client_id = clients.id "
+            "WHERE deliveries.status != 'completed'"
+        )
+
         start_lat = payload.get("start_latitude", DEFAULT_START[0])
         start_lon = payload.get("start_longitude", DEFAULT_START[1])
         date = payload.get("date")
         query = "SELECT clients.*, deliveries.id as delivery_id, deliveries.status, deliveries.scheduled_date FROM deliveries JOIN clients ON deliveries.client_id = clients.id WHERE deliveries.status != 'completed'"
+ main
         params: Tuple = ()
         if date:
             query += " AND deliveries.scheduled_date = ?"
             params = (date,)
+codex/develop-web-system-for-bread-delivery-f4dix1
+        query += " ORDER BY deliveries.scheduled_date ASC, deliveries.id ASC"
+        results = fetch_all(query, params)
+        for client in results:
+            client.setdefault("client_id", client.get("id"))
+        return results
+
         clients = fetch_all(query, params)
         ordered = nearest_neighbor_route((start_lat, start_lon), clients)
         self._set_headers(200)
         self.wfile.write(json.dumps(ordered).encode())
+ main
 
     def build_metrics_summary(self) -> Dict:
         total_clients = fetch_one("SELECT COUNT(*) as total FROM clients", ())["total"]

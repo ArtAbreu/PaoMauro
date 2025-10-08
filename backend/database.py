@@ -35,6 +35,51 @@ CREATE TABLE IF NOT EXISTS driver_positions (
 );
 """
 
+codex/develop-web-system-for-bread-delivery-f4dix1
+IDEAL_SUPERMARKETS = (
+    {
+        "name": "Supermercado Ideal - Centro",
+        "phone": "(11) 1111-1111",
+        "address": "Av. Paulista, 1000 - Bela Vista, São Paulo - SP",
+        "latitude": -23.564003,
+        "longitude": -46.652267,
+        "notes": "Entrega diária de pães frescos",
+    },
+    {
+        "name": "Supermercado Ideal - Jardim",
+        "phone": "(11) 2222-2222",
+        "address": "R. Haddock Lobo, 595 - Cerqueira César, São Paulo - SP",
+        "latitude": -23.560383,
+        "longitude": -46.661712,
+        "notes": "Preferência por entregas antes das 9h",
+    },
+    {
+        "name": "Supermercado Ideal - Norte",
+        "phone": "(11) 3333-3333",
+        "address": "Av. Cruzeiro do Sul, 3000 - Santana, São Paulo - SP",
+        "latitude": -23.500855,
+        "longitude": -46.624439,
+        "notes": "Estacionar na doca 2",
+    },
+    {
+        "name": "Supermercado Ideal - Sul",
+        "phone": "(11) 4444-4444",
+        "address": "Av. Interlagos, 2555 - Interlagos, São Paulo - SP",
+        "latitude": -23.678547,
+        "longitude": -46.689316,
+        "notes": "Conferir estoque com gerente Carlos",
+    },
+    {
+        "name": "Supermercado Ideal - Leste",
+        "phone": "(11) 5555-5555",
+        "address": "Av. Aricanduva, 5000 - Jardim Santa Terezinha, São Paulo - SP",
+        "latitude": -23.560942,
+        "longitude": -46.504947,
+        "notes": "Entrega às segundas, quartas e sextas",
+    },
+)
+
+main
 
 def get_connection() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH)
@@ -46,6 +91,9 @@ def initialize() -> None:
     conn = get_connection()
     try:
         conn.executescript(SCHEMA)
+codex/develop-web-system-for-bread-delivery-f4dix1
+        seed_initial_clients(conn)
+ main
         conn.commit()
     finally:
         conn.close()
@@ -79,3 +127,22 @@ def execute(query: str, params: Iterable[Any] = ()) -> int:
         return cur.lastrowid
     finally:
         conn.close()
+ codex/develop-web-system-for-bread-delivery-f4dix1
+
+
+def seed_initial_clients(conn: sqlite3.Connection) -> None:
+    for client in IDEAL_SUPERMARKETS:
+        exists = conn.execute(
+            "SELECT 1 FROM clients WHERE name = ?",
+            (client["name"],),
+        ).fetchone()
+        if exists:
+            continue
+        conn.execute(
+            """
+            INSERT INTO clients (name, phone, address, latitude, longitude, notes)
+            VALUES (:name, :phone, :address, :latitude, :longitude, :notes)
+            """,
+            client,
+        )
+main

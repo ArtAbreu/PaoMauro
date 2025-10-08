@@ -9,6 +9,14 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+ codex/develop-web-system-for-bread-delivery-f4dix1
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-o9N1j7kG9z8zcb2Yh3lPjUuyPz7Fu7zyFFf0zPBC3uU="
+        crossorigin=""
+    />
+ main
 </head>
 <body>
     <header class="app-header">
@@ -96,7 +104,31 @@
                     <input type="number" id="startLon" step="0.000001" placeholder="-46.63" />
                 </label>
             </div>
+codex/develop-web-system-for-bread-delivery-f4dix1
+            <div class="route-selection">
+                <div class="route-selection__header">
+                    <div>
+                        <h3>Selecionar clientes</h3>
+                        <p class="muted">Escolha manualmente quais paradas entram na rota de hoje.</p>
+                    </div>
+                    <div class="route-selection__controls">
+                        <label>Quantidade de Ideals
+                            <input type="number" id="idealCount" min="1" max="5" value="3" />
+                        </label>
+                        <button type="button" id="selectIdeal" class="secondary">Selecionar Ideals</button>
+                    </div>
+                </div>
+                <div class="route-selection__list" id="routeClients"></div>
+                <p class="muted">Total selecionado: <strong id="selectedCount">0</strong></p>
+            </div>
+            <div class="map-wrapper">
+                <div id="map" aria-label="Mapa de clientes"></div>
+            </div>
             <ol id="routeList"></ol>
+            <div id="routeWarnings" class="route-warnings"></div>
+
+            <ol id="routeList"></ol>
+ main
         </section>
 
         <section class="card" id="deliveries">
@@ -148,6 +180,15 @@
         </tr>
     </template>
 
+ codex/develop-web-system-for-bread-delivery-f4dix1
+    <script
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-o9N1j7kG9z8zcb2Yh3lPjUuyPz7Fu7zyFFf0zPBC3uU="
+        crossorigin=""
+        defer
+    ></script>
+
+ main
     <script src="/app.js" defer></script>
     <script src="/chart.js" defer></script>
 </body>
