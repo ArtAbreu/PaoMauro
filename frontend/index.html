@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rotas da Fábrica de Pães</title>
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-o9N1j7kG9z8zcb2Yh3lPjUuyPz7Fu7zyFFf0zPBC3uU="
+        crossorigin=""
+    />
+</head>
+<body>
+    <header class="app-header">
+        <h1>Gestor de Entregas da Fábrica</h1>
+        <button id="installButton" class="secondary">Instalar App</button>
+    </header>
+    <main class="layout">
+        <section class="card" id="summary">
+            <h2>Resumo do Dia</h2>
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <span class="label">Clientes</span>
+                    <span class="value" id="summaryClients">0</span>
+                </div>
+                <div class="summary-item">
+                    <span class="label">Entregas</span>
+                    <span class="value" id="summaryDeliveries">0</span>
+                </div>
+                <div class="summary-item">
+                    <span class="label">Concluídas Hoje</span>
+                    <span class="value" id="summaryToday">0</span>
+                </div>
+            </div>
+            <div class="charts">
+                <h3>Pães entregues (últimos 14 dias)</h3>
+                <canvas id="breadsChart"></canvas>
+            </div>
+        </section>
+
+        <section class="card" id="clients">
+            <div class="section-header">
+                <h2>Clientes</h2>
+                <button id="refreshClients" class="secondary">Atualizar</button>
+            </div>
+            <form id="clientForm" class="form">
+                <div class="form-grid">
+                    <label>Nome
+                        <input type="text" name="name" required />
+                    </label>
+                    <label>Telefone
+                        <input type="tel" name="phone" />
+                    </label>
+                    <label>Endereço
+                        <input type="text" name="address" />
+                    </label>
+                    <label>Latitude
+                        <input type="number" name="latitude" step="0.000001" />
+                    </label>
+                    <label>Longitude
+                        <input type="number" name="longitude" step="0.000001" />
+                    </label>
+                    <label>Observações
+                        <input type="text" name="notes" />
+                    </label>
+                </div>
+                <button type="submit">Cadastrar Cliente</button>
+            </form>
+            <table class="data-table" id="clientsTable">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Telefone</th>
+                        <th>Endereço</th>
+                        <th>Latitude</th>
+                        <th>Longitude</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </section>
+
+        <section class="card" id="routes">
+            <div class="section-header">
+                <h2>Planejamento de Rota</h2>
+                <button id="generateRoute">Gerar rota</button>
+            </div>
+            <div class="form-grid">
+                <label>Data da rota
+                    <input type="date" id="routeDate" />
+                </label>
+                <label>Latitude inicial
+                    <input type="number" id="startLat" step="0.000001" placeholder="-23.55" />
+                </label>
+                <label>Longitude inicial
+                    <input type="number" id="startLon" step="0.000001" placeholder="-46.63" />
+                </label>
+            </div>
+            <div class="route-selection">
+                <div class="route-selection__header">
+                    <div>
+                        <h3>Selecionar clientes</h3>
+                        <p class="muted">Escolha manualmente quais paradas entram na rota de hoje.</p>
+                    </div>
+                    <div class="route-selection__controls">
+                        <label>Quantidade de Ideals
+                            <input type="number" id="idealCount" min="1" max="5" value="3" />
+                        </label>
+                        <button type="button" id="selectIdeal" class="secondary">Selecionar Ideals</button>
+                    </div>
+                </div>
+                <div class="route-selection__list" id="routeClients"></div>
+                <p class="muted">Total selecionado: <strong id="selectedCount">0</strong></p>
+            </div>
+            <div class="map-wrapper">
+                <div id="map" aria-label="Mapa de clientes"></div>
+            </div>
+            <ol id="routeList"></ol>
+            <div id="routeWarnings" class="route-warnings"></div>
+        </section>
+
+        <section class="card" id="deliveries">
+            <div class="section-header">
+                <h2>Entregas do Dia</h2>
+                <button id="refreshDeliveries" class="secondary">Atualizar</button>
+            </div>
+            <form id="deliveryForm" class="form">
+                <div class="form-grid">
+                    <label>Cliente
+                        <select name="client_id" required id="deliveryClient"></select>
+                    </label>
+                    <label>Data
+                        <input type="date" name="scheduled_date" required />
+                    </label>
+                    <label>Quantidade de pães
+                        <input type="number" name="quantity" min="0" />
+                    </label>
+                    <label>Observações
+                        <input type="text" name="notes" />
+                    </label>
+                </div>
+                <button type="submit">Agendar entrega</button>
+            </form>
+            <table class="data-table" id="deliveriesTable">
+                <thead>
+                    <tr>
+                        <th>Cliente</th>
+                        <th>Data</th>
+                        <th>Status</th>
+                        <th>Quantidade</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </section>
+    </main>
+
+    <template id="deliveryRowTemplate">
+        <tr>
+            <td class="client-name"></td>
+            <td class="delivery-date"></td>
+            <td class="delivery-status"></td>
+            <td class="delivery-quantity"></td>
+            <td>
+                <button class="complete-delivery">Registrar entrega</button>
+            </td>
+        </tr>
+    </template>
+
+    <script
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-o9N1j7kG9z8zcb2Yh3lPjUuyPz7Fu7zyFFf0zPBC3uU="
+        crossorigin=""
+        defer
+    ></script>
+    <script src="/app.js" defer></script>
+    <script src="/chart.js" defer></script>
+</body>
+</html>
