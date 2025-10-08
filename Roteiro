@@ -1,0 +1,68 @@
+Título: Sistema Web de Rotas e Entregas da Fábrica de Pães
+
+Descrição do Projeto:
+Quero desenvolver um sistema web responsivo, com acesso também via celular (PWA ou site adaptado), para gerenciar e acompanhar as entregas de pães da fábrica do meu pai. O objetivo é ter uma ferramenta simples, mas escalável, que permita o controle de rotas, clientes e entregas em tempo real.
+
+Requisitos iniciais:
+
+Cadastro de clientes
+
+Nome, telefone, endereço completo, coordenadas (latitude/longitude).
+
+Campo opcional para observações (ex: horário de entrega preferencial, tipo de produto, etc.).
+
+Mapa e Rotas
+
+Visualização dos clientes em um mapa (Google Maps ou OpenStreetMap).
+
+Geração de rotas otimizadas com base na localização atual do motorista.
+
+Possibilidade de marcar clientes como “entregue” durante o percurso.
+
+Localização em tempo real
+
+Rastreamento do motorista (via GPS do celular).
+
+Atualização automática no mapa para o gestor acompanhar o trajeto.
+
+Contador de entregas e métricas
+
+Exibição do número de entregas realizadas no dia.
+
+Histórico de entregas por data, cliente e motorista.
+
+Gráficos ou painel simples com indicadores (ex: total entregue por dia, tempo médio por rota, etc.).
+
+Usuários e permissões
+
+Login do administrador (para gerenciar clientes e motoristas).
+
+Login de motorista (apenas visualizar rota e registrar entregas).
+
+Futuras implementações (deixar preparado para expansão):
+
+Integração com sistema de pedidos.
+
+Relatórios financeiros.
+
+Notificações automáticas de saída e entrega para os clientes.
+
+Tecnologias sugeridas (abertas a recomendação):
+
+Backend: Node.js (Express) ou NestJS.
+
+Frontend: React.js ou Next.js.
+
+Banco de dados: MongoDB ou PostgreSQL.
+
+Mapas: Google Maps API ou Leaflet (OpenStreetMap).
+
+Autenticação: JWT.
+
+Objetivo principal:
+Criar um sistema leve, funcional e acessível por celular, que ajude a organizar as entregas e acompanhar os motoristas em tempo real, facilitando a gestão logística da fábrica.
+
+
+A empresa tem só 1 entregador, que é meu pai. Quero que seja possivel criar a rota antes de começar o dia e que o programa entenda quando ele parar em algum estabelecimento e automaticamente perguntar se deixou pao e se sim, quantos paes deixou.
+
+Salva tudo num banco de dados e crie a possibilidade de gerar planilhas variadas, número de paes vendidos, pontos com maior frequencia, etc etc etc
