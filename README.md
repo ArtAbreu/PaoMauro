@@ -17,7 +17,21 @@ Este repositório contém uma aplicação web completa (backend em Python + fron
    source .venv/bin/activate
    ```
 
-2. **Iniciar o servidor**
+2. **Instalar dependências**
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Configurar a chave do Google Maps**
+
+   A interface usa os serviços JavaScript, Places e Directions do Google Maps. Exporte a chave antes de iniciar o backend:
+
+   ```bash
+   export GOOGLE_MAPS_API_KEY="sua_chave_aqui"
+   ```
+
+4. **Iniciar o servidor**
 
    ```bash
    cd backend
@@ -26,7 +40,7 @@ Este repositório contém uma aplicação web completa (backend em Python + fron
 
    O servidor ficará disponível em `http://localhost:8000`.
 
-3. **Acessar o frontend**
+5. **Acessar o frontend**
 
    Abra o navegador em `http://localhost:8000/`. A interface é responsiva e pode ser instalada como aplicativo (PWA) em celulares ou desktops.
 
@@ -41,24 +55,26 @@ Este repositório contém uma aplicação web completa (backend em Python + fron
 | `POST` | `/api/deliveries` | Agenda uma entrega. |
 | `GET` | `/api/deliveries?date=AAAA-MM-DD` | Lista entregas (filtradas por data). |
 | `POST` | `/api/deliveries/:id/complete` | Marca entrega como concluída e registra quantidade. |
-| `POST` | `/api/routes` | Gera rota otimizada para o dia usando heurística de vizinho mais próximo. |
-| `POST` | `/api/driver/location` | Registra localização do motorista (GPS). |
+| `POST` | `/api/routes` | Gera rota otimizada usando Google Directions (com fallback automático). |
+| `POST` | `/api/driver/location` | Registra localização do motorista, detecta paradas e retorna progresso. |
+| `GET` | `/api/driver/location` | Lista posições recentes do motorista e o status atual da rota. |
+| `GET` | `/api/config` | Retorna parâmetros públicos do frontend (como a chave do Google Maps). |
 | `GET` | `/api/metrics/summary` | Resumo com métricas de clientes, entregas e pães. |
 
 ## Funcionalidades em destaque
 
-- Planejamento de rota com base em coordenadas armazenadas para cada cliente.
-codex/develop-web-system-for-bread-delivery-f4dix1
-- Mapa interativo com Leaflet mostrando todos os clientes e permitindo selecionar rapidamente quais paradas entram na rota (inclui os 5 supermercados Ideal já cadastrados com geolocalização).
-
-- Registro de entregas com quantidade de pães e observações.
-- Painel de métricas com gráfico simples (canvas) para visualizar pães entregues nos últimos dias.
+- Integração completa com Google Maps: autocomplete de endereços, seleção de ponto com marcador arrastável e visualização das rotas oficiais do Directions API.
+- Planejamento inteligente de rota com otimização pelo Google Directions e fallback local por vizinho mais próximo.
+- Rastreamento em tempo real do motorista: o mapa acompanha a posição atual, detecta paradas dentro do raio do cliente e solicita automaticamente o registro de pães entregues.
+- Mapa interativo (Google Maps) com destaque para o próximo destino, status da rota e clientes que ainda precisam ser atendidos.
+- Registro de entregas com quantidade de pães, observações e histórico de visitas detectadas.
+- Painel de métricas com gráfico (canvas) para visualizar pães entregues nos últimos dias.
 - PWA com manifesto e service worker para uso offline básico e instalação no celular.
 - Armazenamento seguro dos dados em banco SQLite local.
 
 ## Próximos passos sugeridos
 
 - Implementar autenticação por usuário/motorista (JWT ou sessão).
-- Sincronização em tempo real (WebSockets) para localização do motorista e status das entregas.
+- Evoluir o canal de atualização em tempo real para WebSockets/SSE e enviar notificações push.
 - Exportação de relatórios em CSV/planilhas diretamente do backend.
 - Integração com sistemas de pedidos e notificações automáticas aos clientes.
