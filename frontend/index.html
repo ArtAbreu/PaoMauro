@@ -3,53 +3,70 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Rotas da Fábrica de Pães</title>
+    <title>Painel de Entregas • Padaria Ideal</title>
     <link rel="manifest" href="/manifest.json" />
     <link rel="stylesheet" href="/styles.css" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
- codex/develop-web-system-for-bread-delivery-f4dix1
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet"
+    />
     <link
         rel="stylesheet"
         href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-o9N1j7kG9z8zcb2Yh3lPjUuyPz7Fu7zyFFf0zPBC3uU="
         crossorigin=""
     />
- main
 </head>
 <body>
     <header class="app-header">
-        <h1>Gestor de Entregas da Fábrica</h1>
-        <button id="installButton" class="secondary">Instalar App</button>
+        <div class="branding">
+            <span class="badge">Fábrica de Pães</span>
+            <h1>Operações de Entrega</h1>
+            <p class="muted">Controle clientes, monte rotas e acompanhe o desempenho diário.</p>
+        </div>
+        <div class="header-actions">
+            <button id="installButton" class="secondary">Instalar aplicativo</button>
+        </div>
     </header>
+
     <main class="layout">
         <section class="card" id="summary">
-            <h2>Resumo do Dia</h2>
+            <div class="section-header">
+                <h2>Resumo do dia</h2>
+                <button id="refreshSummary" class="ghost">Atualizar</button>
+            </div>
             <div class="summary-grid">
-                <div class="summary-item">
-                    <span class="label">Clientes</span>
+                <article class="summary-item">
+                    <span class="label">Clientes ativos</span>
                     <span class="value" id="summaryClients">0</span>
-                </div>
-                <div class="summary-item">
-                    <span class="label">Entregas</span>
+                </article>
+                <article class="summary-item">
+                    <span class="label">Entregas criadas</span>
                     <span class="value" id="summaryDeliveries">0</span>
-                </div>
-                <div class="summary-item">
-                    <span class="label">Concluídas Hoje</span>
+                </article>
+                <article class="summary-item">
+                    <span class="label">Concluídas hoje</span>
                     <span class="value" id="summaryToday">0</span>
-                </div>
+                </article>
             </div>
             <div class="charts">
-                <h3>Pães entregues (últimos 14 dias)</h3>
-                <canvas id="breadsChart"></canvas>
+                <div class="chart-header">
+                    <h3>Volume entregue (14 dias)</h3>
+                    <span class="muted">Atualizado automaticamente após registrar entregas.</span>
+                </div>
+                <canvas id="breadsChart" height="140"></canvas>
             </div>
         </section>
 
         <section class="card" id="clients">
             <div class="section-header">
-                <h2>Clientes</h2>
-                <button id="refreshClients" class="secondary">Atualizar</button>
+                <div>
+                    <h2>Cadastro de clientes</h2>
+                    <p class="muted">Inclua novos pontos de entrega com endereço e coordenadas.</p>
+                </div>
+                <button id="refreshClients" class="ghost">Atualizar</button>
             </div>
             <form id="clientForm" class="form">
                 <div class="form-grid">
@@ -72,25 +89,32 @@
                         <input type="text" name="notes" />
                     </label>
                 </div>
-                <button type="submit">Cadastrar Cliente</button>
+                <div class="form-actions">
+                    <button type="submit">Adicionar cliente</button>
+                </div>
             </form>
-            <table class="data-table" id="clientsTable">
-                <thead>
-                    <tr>
-                        <th>Nome</th>
-                        <th>Telefone</th>
-                        <th>Endereço</th>
-                        <th>Latitude</th>
-                        <th>Longitude</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
+            <div class="table-wrapper">
+                <table class="data-table" id="clientsTable">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Telefone</th>
+                            <th>Endereço</th>
+                            <th>Latitude</th>
+                            <th>Longitude</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
         </section>
 
         <section class="card" id="routes">
             <div class="section-header">
-                <h2>Planejamento de Rota</h2>
+                <div>
+                    <h2>Planejamento de rota</h2>
+                    <p class="muted">Defina a data, selecione clientes e visualize o trajeto no mapa.</p>
+                </div>
                 <button id="generateRoute">Gerar rota</button>
             </div>
             <div class="form-grid">
@@ -98,43 +122,47 @@
                     <input type="date" id="routeDate" />
                 </label>
                 <label>Latitude inicial
-                    <input type="number" id="startLat" step="0.000001" placeholder="-23.55" />
+                    <input type="number" id="startLat" step="0.000001" placeholder="-23.550520" />
                 </label>
                 <label>Longitude inicial
-                    <input type="number" id="startLon" step="0.000001" placeholder="-46.63" />
+                    <input type="number" id="startLon" step="0.000001" placeholder="-46.633308" />
                 </label>
             </div>
-codex/develop-web-system-for-bread-delivery-f4dix1
             <div class="route-selection">
                 <div class="route-selection__header">
                     <div>
                         <h3>Selecionar clientes</h3>
-                        <p class="muted">Escolha manualmente quais paradas entram na rota de hoje.</p>
+                        <p class="muted">Clique nas opções ou nos marcadores do mapa para incluir/excluir paradas.</p>
                     </div>
                     <div class="route-selection__controls">
                         <label>Quantidade de Ideals
                             <input type="number" id="idealCount" min="1" max="5" value="3" />
                         </label>
-                        <button type="button" id="selectIdeal" class="secondary">Selecionar Ideals</button>
+                        <button type="button" id="selectIdeal" class="ghost">Selecionar Ideals</button>
                     </div>
                 </div>
                 <div class="route-selection__list" id="routeClients"></div>
-                <p class="muted">Total selecionado: <strong id="selectedCount">0</strong></p>
+                <p class="muted">Total selecionado: <strong id="selectedCount">0</strong> clientes</p>
             </div>
-            <div class="map-wrapper">
-                <div id="map" aria-label="Mapa de clientes"></div>
+            <div class="map-panel">
+                <div class="map-wrapper">
+                    <div id="map" aria-label="Mapa de clientes"></div>
+                </div>
+                <aside class="route-panel">
+                    <h3>Ordem sugerida</h3>
+                    <ol id="routeList"></ol>
+                    <div id="routeWarnings" class="route-warnings"></div>
+                </aside>
             </div>
-            <ol id="routeList"></ol>
-            <div id="routeWarnings" class="route-warnings"></div>
-
-            <ol id="routeList"></ol>
- main
         </section>
 
         <section class="card" id="deliveries">
             <div class="section-header">
-                <h2>Entregas do Dia</h2>
-                <button id="refreshDeliveries" class="secondary">Atualizar</button>
+                <div>
+                    <h2>Agenda de entregas</h2>
+                    <p class="muted">Controle o que precisa sair e finalize entregas concluídas.</p>
+                </div>
+                <button id="refreshDeliveries" class="ghost">Atualizar</button>
             </div>
             <form id="deliveryForm" class="form">
                 <div class="form-grid">
@@ -151,20 +179,24 @@ codex/develop-web-system-for-bread-delivery-f4dix1
                         <input type="text" name="notes" />
                     </label>
                 </div>
-                <button type="submit">Agendar entrega</button>
+                <div class="form-actions">
+                    <button type="submit">Agendar entrega</button>
+                </div>
             </form>
-            <table class="data-table" id="deliveriesTable">
-                <thead>
-                    <tr>
-                        <th>Cliente</th>
-                        <th>Data</th>
-                        <th>Status</th>
-                        <th>Quantidade</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
+            <div class="table-wrapper">
+                <table class="data-table" id="deliveriesTable">
+                    <thead>
+                        <tr>
+                            <th>Cliente</th>
+                            <th>Data</th>
+                            <th>Status</th>
+                            <th>Quantidade</th>
+                            <th class="actions">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
         </section>
     </main>
 
@@ -174,21 +206,18 @@ codex/develop-web-system-for-bread-delivery-f4dix1
             <td class="delivery-date"></td>
             <td class="delivery-status"></td>
             <td class="delivery-quantity"></td>
-            <td>
-                <button class="complete-delivery">Registrar entrega</button>
+            <td class="actions">
+                <button class="complete-delivery ghost">Registrar entrega</button>
             </td>
         </tr>
     </template>
 
- codex/develop-web-system-for-bread-delivery-f4dix1
     <script
         src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-o9N1j7kG9z8zcb2Yh3lPjUuyPz7Fu7zyFFf0zPBC3uU="
         crossorigin=""
         defer
     ></script>
-
- main
     <script src="/app.js" defer></script>
     <script src="/chart.js" defer></script>
 </body>

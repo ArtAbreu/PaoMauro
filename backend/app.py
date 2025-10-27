@@ -1,10 +1,7 @@
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-codex/develop-web-system-for-bread-delivery-f4dix1
-from typing import Dict, Iterable, List, Tuple
-from typing import Dict, Tuple
-
+from typing import Dict, Iterable, List, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
 
 from database import execute, fetch_all, fetch_one, initialize
@@ -17,8 +14,9 @@ DEFAULT_START = (-23.55052, -46.633308)  # São Paulo como ponto inicial padrão
 class RequestHandler(BaseHTTPRequestHandler):
     server_version = "BakeryDelivery/1.0"
 
-    def log_message(self, format: str, *args) -> None:
-        return  # silencia logs padrão
+    def log_message(self, format: str, *args) -> None:  # noqa: D401
+        """Silencia logs padrão do servidor HTTP."""
+        return
 
     def _set_headers(self, status: int = 200, content_type: str = "application/json") -> None:
         self.send_response(status)
@@ -103,7 +101,10 @@ class RequestHandler(BaseHTTPRequestHandler):
         elif parsed.path == "/api/deliveries":
             params = parse_qs(parsed.query)
             date = params.get("date", [None])[0]
-            query = "SELECT deliveries.*, clients.name as client_name FROM deliveries JOIN clients ON clients.id = deliveries.client_id"
+            query = (
+                "SELECT deliveries.*, clients.name as client_name "
+                "FROM deliveries JOIN clients ON clients.id = deliveries.client_id"
+            )
             args: Tuple = ()
             if date:
                 query += " WHERE scheduled_date = ?"
@@ -156,7 +157,8 @@ class RequestHandler(BaseHTTPRequestHandler):
             (client_id, date, quantity, notes),
         )
         delivery = fetch_one(
-            "SELECT deliveries.*, clients.name as client_name FROM deliveries JOIN clients ON clients.id = deliveries.client_id WHERE deliveries.id = ?",
+            "SELECT deliveries.*, clients.name as client_name FROM deliveries "
+            "JOIN clients ON clients.id = deliveries.client_id WHERE deliveries.id = ?",
             (delivery_id,),
         )
         self._set_headers(201)
@@ -167,11 +169,13 @@ class RequestHandler(BaseHTTPRequestHandler):
         quantity = payload.get("quantity")
         notes = payload.get("notes")
         execute(
-            "UPDATE deliveries SET status = 'completed', quantity = COALESCE(?, quantity), notes = COALESCE(?, notes), completed_at = datetime('now') WHERE id = ?",
+            "UPDATE deliveries SET status = 'completed', quantity = COALESCE(?, quantity), "
+            "notes = COALESCE(?, notes), completed_at = datetime('now') WHERE id = ?",
             (quantity, notes, delivery_id),
         )
         delivery = fetch_one(
-            "SELECT deliveries.*, clients.name as client_name FROM deliveries JOIN clients ON clients.id = deliveries.client_id WHERE deliveries.id = ?",
+            "SELECT deliveries.*, clients.name as client_name FROM deliveries "
+            "JOIN clients ON clients.id = deliveries.client_id WHERE deliveries.id = ?",
             (delivery_id,),
         )
         self._set_headers(200)
@@ -192,7 +196,6 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(json.dumps({"status": "ok"}).encode())
 
     def generate_route(self, payload: Dict) -> None:
-codex/develop-web-system-for-bread-delivery-f4dix1
         start_lat = self._parse_float(payload.get("start_latitude"), DEFAULT_START[0])
         start_lon = self._parse_float(payload.get("start_longitude"), DEFAULT_START[1])
         date = payload.get("date")
@@ -235,7 +238,7 @@ codex/develop-web-system-for-bread-delivery-f4dix1
         except (TypeError, ValueError):
             return float(default)
 
-    def _fetch_route_candidates(self, date: str, client_ids: Iterable[int]) -> List[Dict]:
+    def _fetch_route_candidates(self, date: Optional[str], client_ids: Iterable[int]) -> List[Dict]:
         client_ids_tuple = tuple(client_ids)
         if client_ids_tuple:
             placeholders = ",".join(["?"] * len(client_ids_tuple))
@@ -253,9 +256,7 @@ codex/develop-web-system-for-bread-delivery-f4dix1
                 deliveries_query += " AND deliveries.scheduled_date = ?"
                 deliveries_params = client_ids_tuple + (date,)
             deliveries = fetch_all(deliveries_query, deliveries_params)
-            delivery_map = {}
-            for delivery in deliveries:
-                delivery_map.setdefault(delivery["client_id"], delivery)
+            delivery_map = {delivery["client_id"]: delivery for delivery in deliveries}
 
             enriched: List[Dict] = []
             for client in clients:
@@ -285,31 +286,37 @@ codex/develop-web-system-for-bread-delivery-f4dix1
 
         query = (
             "SELECT clients.*, deliveries.id as delivery_id, deliveries.status, deliveries.scheduled_date, "
-            "clients.name as client_name FROM deliveries JOIN clients ON deliveries.client_id = clients.id "
+            "clients.name as client_name "
+            "FROM deliveries JOIN clients ON deliveries.client_id = clients.id "
             "WHERE deliveries.status != 'completed'"
         )
-
-        start_lat = payload.get("start_latitude", DEFAULT_START[0])
-        start_lon = payload.get("start_longitude", DEFAULT_START[1])
-        date = payload.get("date")
-        query = "SELECT clients.*, deliveries.id as delivery_id, deliveries.status, deliveries.scheduled_date FROM deliveries JOIN clients ON deliveries.client_id = clients.id WHERE deliveries.status != 'completed'"
- main
         params: Tuple = ()
         if date:
             query += " AND deliveries.scheduled_date = ?"
             params = (date,)
-codex/develop-web-system-for-bread-delivery-f4dix1
         query += " ORDER BY deliveries.scheduled_date ASC, deliveries.id ASC"
         results = fetch_all(query, params)
-        for client in results:
-            client.setdefault("client_id", client.get("id"))
-        return results
+        if results:
+            for client in results:
+                client.setdefault("client_id", client.get("client_id") or client.get("id"))
+                client.setdefault("client_name", client.get("client_name") or client.get("name"))
+            return results
 
-        clients = fetch_all(query, params)
-        ordered = nearest_neighbor_route((start_lat, start_lon), clients)
-        self._set_headers(200)
-        self.wfile.write(json.dumps(ordered).encode())
- main
+        clients = fetch_all("SELECT * FROM clients ORDER BY name")
+        enriched: List[Dict] = []
+        for client in clients:
+            entry = dict(client)
+            entry.setdefault("client_id", entry.get("id"))
+            entry.update(
+                {
+                    "delivery_id": None,
+                    "status": "pending",
+                    "scheduled_date": date,
+                    "client_name": client.get("name"),
+                }
+            )
+            enriched.append(entry)
+        return enriched
 
     def build_metrics_summary(self) -> Dict:
         total_clients = fetch_one("SELECT COUNT(*) as total FROM clients", ())["total"]
@@ -319,10 +326,14 @@ codex/develop-web-system-for-bread-delivery-f4dix1
             (),
         )["total"]
         totals_by_day = fetch_all(
-            "SELECT scheduled_date as day, SUM(COALESCE(quantity, 0)) as breads FROM deliveries WHERE status = 'completed' GROUP BY scheduled_date ORDER BY scheduled_date DESC LIMIT 14"
+            "SELECT scheduled_date as day, SUM(COALESCE(quantity, 0)) as breads "
+            "FROM deliveries WHERE status = 'completed' "
+            "GROUP BY scheduled_date ORDER BY scheduled_date DESC LIMIT 14"
         )
         top_clients = fetch_all(
-            "SELECT clients.name, COUNT(deliveries.id) as deliveries FROM deliveries JOIN clients ON clients.id = deliveries.client_id GROUP BY clients.name ORDER BY deliveries DESC LIMIT 5"
+            "SELECT clients.name, COUNT(deliveries.id) as deliveries "
+            "FROM deliveries JOIN clients ON clients.id = deliveries.client_id "
+            "GROUP BY clients.name ORDER BY deliveries DESC LIMIT 5"
         )
         return {
             "totals": {

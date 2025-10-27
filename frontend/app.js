@@ -1,5 +1,4 @@
 const API_BASE = '/api';
- codex/develop-web-system-for-bread-delivery-f4dix1
 const DEFAULT_START = { latitude: -23.55052, longitude: -46.633308 };
 
 let map;
@@ -7,11 +6,10 @@ let markersLayer;
 let routeLayer;
 const markerByClientId = new Map();
 const checkboxByClientId = new Map();
-let cachedClients = [];
 const selectedClientIds = new Set();
+let cachedClients = [];
 let hasAutoSelectedClients = false;
 let routeUpdateTimeout;
- main
 
 async function fetchJSON(url, options = {}) {
     const response = await fetch(url, {
@@ -37,7 +35,8 @@ function serializeForm(form) {
             return;
         }
         if (['latitude', 'longitude', 'quantity'].includes(key)) {
-            payload[key] = value === null ? null : Number(value);
+            const parsed = Number(value);
+            payload[key] = Number.isNaN(parsed) ? null : parsed;
         } else {
             payload[key] = value;
         }
@@ -45,7 +44,6 @@ function serializeForm(form) {
     return payload;
 }
 
-codex/develop-web-system-for-bread-delivery-f4dix1
 function initMap() {
     const mapContainer = document.getElementById('map');
     if (!mapContainer || typeof L === 'undefined') {
@@ -66,22 +64,21 @@ function initMap() {
 
 function getMarkerStyle(clientId) {
     const isSelected = selectedClientIds.has(Number(clientId));
-    if (isSelected) {
-        return {
-            radius: 10,
-            color: '#f97316',
-            weight: 3,
-            fillColor: '#fb923c',
-            fillOpacity: 0.85,
-        };
-    }
-    return {
-        radius: 8,
-        color: '#2563eb',
-        weight: 2,
-        fillColor: '#3b82f6',
-        fillOpacity: 0.75,
-    };
+    return isSelected
+        ? {
+              radius: 10,
+              color: '#f97316',
+              weight: 3,
+              fillColor: '#fb923c',
+              fillOpacity: 0.85,
+          }
+        : {
+              radius: 8,
+              color: '#2563eb',
+              weight: 2,
+              fillColor: '#3b82f6',
+              fillOpacity: 0.75,
+          };
 }
 
 function updateMarkerStyle(clientId) {
@@ -109,11 +106,11 @@ function highlightRouteOption(clientId, isSelected) {
     }
 }
 
-function scheduleRouteUpdate() {
+function scheduleRouteUpdate(delay = 250) {
     clearTimeout(routeUpdateTimeout);
     routeUpdateTimeout = setTimeout(() => {
         generateRoute();
-    }, 200);
+    }, delay);
 }
 
 function setClientSelection(rawClientId, isSelected) {
@@ -141,11 +138,11 @@ function renderRouteClients(clients) {
         if (Number.isNaN(clientId)) return;
         const option = document.createElement('label');
         option.className = 'route-option';
+
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.value = clientId;
-        const isSelected = selectedClientIds.has(clientId);
-        checkbox.checked = isSelected;
+        checkbox.checked = selectedClientIds.has(clientId);
         checkbox.addEventListener('change', (event) => {
             setClientSelection(clientId, event.target.checked);
         });
@@ -153,14 +150,13 @@ function renderRouteClients(clients) {
 
         const info = document.createElement('div');
         const title = document.createElement('strong');
-        title.textContent = client.name;
+        title.textContent = client.name || 'Sem nome';
         const subtitle = document.createElement('small');
         subtitle.textContent = client.address || 'Sem endereço cadastrado';
         info.appendChild(title);
         info.appendChild(subtitle);
         option.appendChild(info);
 
-        option.classList.toggle('active', isSelected);
         option.addEventListener('click', (event) => {
             if (event.target.tagName === 'INPUT') return;
             const newValue = !checkbox.checked;
@@ -168,6 +164,7 @@ function renderRouteClients(clients) {
             setClientSelection(clientId, newValue);
         });
 
+        option.classList.toggle('active', checkbox.checked);
         checkboxByClientId.set(clientId, checkbox);
         container.appendChild(option);
     });
@@ -187,9 +184,7 @@ function renderClientsOnMap(clients) {
         const lon = Number(client.longitude);
         if (Number.isNaN(lat) || Number.isNaN(lon)) return;
         const marker = L.circleMarker([lat, lon], getMarkerStyle(client.id));
-        marker.bindPopup(
-            `<strong>${client.name}</strong><br>${client.address || ''}`,
-        );
+        marker.bindPopup(`<strong>${client.name}</strong><br>${client.address || ''}`);
         marker.on('click', () => {
             const isSelected = selectedClientIds.has(Number(client.id));
             setClientSelection(client.id, !isSelected);
@@ -201,7 +196,7 @@ function renderClientsOnMap(clients) {
 
     if (bounds.length) {
         const boundsLayer = L.latLngBounds(bounds);
-        map.fitBounds(boundsLayer, { padding: [24, 24] });
+        map.fitBounds(boundsLayer, { padding: [28, 28] });
     } else {
         map.setView([DEFAULT_START.latitude, DEFAULT_START.longitude], 11);
     }
@@ -227,7 +222,11 @@ function drawRouteOnMap(stops, start) {
 
     if (!Array.isArray(stops) || stops.length === 0) {
         if (start && start.latitude != null && start.longitude != null) {
-            map.setView([Number(start.latitude), Number(start.longitude)], 13);
+            const startLat = Number(start.latitude);
+            const startLon = Number(start.longitude);
+            if (!Number.isNaN(startLat) && !Number.isNaN(startLon)) {
+                map.setView([startLat, startLon], 13);
+            }
         }
         return;
     }
@@ -249,7 +248,7 @@ function drawRouteOnMap(stops, start) {
         path.push([lat, lon]);
         const marker = markerByClientId.get(Number(stop.client_id || stop.id));
         if (marker) {
-            marker.bindTooltip(`${index + 1}º · ${stop.client_name || stop.name}`, {
+            marker.bindTooltip(`${index + 1}º • ${stop.client_name || stop.name}`, {
                 direction: 'top',
                 permanent: false,
             });
@@ -259,9 +258,9 @@ function drawRouteOnMap(stops, start) {
     if (path.length >= 2) {
         const polyline = L.polyline(path, {
             color: '#22c55e',
-            weight: 4,
-            opacity: 0.75,
-            dashArray: '6,8',
+            weight: 5,
+            opacity: 0.8,
+            dashArray: '6 10',
         });
         routeLayer.addLayer(polyline);
         map.fitBounds(polyline.getBounds(), { padding: [32, 32] });
@@ -296,34 +295,12 @@ async function loadClients() {
     const clients = await fetchJSON(`${API_BASE}/clients`);
     cachedClients = clients;
 
-
-async function loadClients() {
-    const clients = await fetchJSON(`${API_BASE}/clients`);
- main
-    const tbody = document.querySelector('#clientsTable tbody');
-    const select = document.querySelector('#deliveryClient');
-    tbody.innerHTML = '';
-    select.innerHTML = '<option value="">Selecione...</option>';
- codex/develop-web-system-for-bread-delivery-f4dix1
-
- main
-    clients.forEach((client) => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${client.name}</td>
-            <td>${client.phone || ''}</td>
-            <td>${client.address || ''}</td>
-            <td>${client.latitude ?? ''}</td>
-            <td>${client.longitude ?? ''}</td>
-        `;
-        tbody.appendChild(row);
-
-        const option = document.createElement('option');
-        option.value = client.id;
-        option.textContent = client.name;
-        select.appendChild(option);
+    const validIds = new Set(clients.map((client) => Number(client.id)));
+    Array.from(selectedClientIds).forEach((clientId) => {
+        if (!validIds.has(clientId)) {
+            selectedClientIds.delete(clientId);
+        }
     });
- codex/develop-web-system-for-bread-delivery-f4dix1
 
     if (!hasAutoSelectedClients && clients.length) {
         const withCoordinates = clients.filter(
@@ -339,29 +316,43 @@ async function loadClients() {
         hasAutoSelectedClients = true;
     }
 
+    const tbody = document.querySelector('#clientsTable tbody');
+    const select = document.querySelector('#deliveryClient');
+    if (tbody) tbody.innerHTML = '';
+    if (select) select.innerHTML = '<option value="">Selecione...</option>';
+
     clients.forEach((client) => {
-        const clientId = Number(client.id);
-        if (Number.isNaN(clientId)) return;
-        if (
-            !selectedClientIds.has(clientId)
-            && (client.name || '').toLowerCase().includes('ideal')
-        ) {
-            selectedClientIds.add(clientId);
+        if (tbody) {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${client.name}</td>
+                <td>${client.phone || ''}</td>
+                <td>${client.address || ''}</td>
+                <td>${client.latitude ?? ''}</td>
+                <td>${client.longitude ?? ''}</td>
+            `;
+            tbody.appendChild(row);
+        }
+        if (select) {
+            const option = document.createElement('option');
+            option.value = client.id;
+            option.textContent = client.name;
+            select.appendChild(option);
         }
     });
 
     renderRouteClients(clients);
     renderClientsOnMap(clients);
     return clients;
- main
 }
 
 async function loadDeliveries() {
     const dateInput = document.querySelector('#routeDate');
-    const params = dateInput.value ? `?date=${dateInput.value}` : '';
+    const params = dateInput && dateInput.value ? `?date=${dateInput.value}` : '';
     const deliveries = await fetchJSON(`${API_BASE}/deliveries${params}`);
     const tbody = document.querySelector('#deliveriesTable tbody');
     const template = document.querySelector('#deliveryRowTemplate');
+    if (!tbody || !template) return deliveries;
     tbody.innerHTML = '';
 
     deliveries.forEach((delivery) => {
@@ -370,16 +361,18 @@ async function loadDeliveries() {
         fragment.querySelector('.delivery-date').textContent = delivery.scheduled_date;
         fragment.querySelector('.delivery-status').textContent = delivery.status;
         fragment.querySelector('.delivery-quantity').textContent = delivery.quantity ?? '-';
-codex/develop-web-system-for-bread-delivery-f4dix1
-        fragment
-            .querySelector('.complete-delivery')
-            .addEventListener('click', () => completeDelivery(delivery.id));
-
-        fragment.querySelector('.complete-delivery').dataset.id = delivery.id;
-        fragment.querySelector('.complete-delivery').addEventListener('click', () => completeDelivery(delivery.id));
- main
+        const button = fragment.querySelector('.complete-delivery');
+        if (button) {
+            button.dataset.id = delivery.id;
+            button.addEventListener('click', () => completeDelivery(delivery.id));
+            button.disabled = delivery.status === 'completed';
+            if (delivery.status === 'completed') {
+                button.textContent = 'Entregue';
+            }
+        }
         tbody.appendChild(fragment);
     });
+    return deliveries;
 }
 
 async function loadSummary() {
@@ -387,7 +380,6 @@ async function loadSummary() {
     document.querySelector('#summaryClients').textContent = summary.totals.clients;
     document.querySelector('#summaryDeliveries').textContent = summary.totals.deliveries;
     document.querySelector('#summaryToday').textContent = summary.totals.completed_today;
- codex/develop-web-system-for-bread-delivery-f4dix1
     renderBarChart(
         'breadsChart',
         summary.breads_by_day.map((item) => ({
@@ -395,26 +387,26 @@ async function loadSummary() {
             value: item.breads,
         })),
     );
+    return summary;
 }
 
 async function generateRoute() {
     const list = document.querySelector('#routeList');
     if (!list) return;
-    const warnings = document.getElementById('routeWarnings');
-    if (warnings) warnings.textContent = '';
-    if (list) list.innerHTML = '';
+    list.innerHTML = '';
+    showRouteWarnings([]);
 
-    const dateValue = document.querySelector('#routeDate').value;
-    const startLatValue = document.querySelector('#startLat').value;
-    const startLonValue = document.querySelector('#startLon').value;
+    const dateValue = document.querySelector('#routeDate')?.value;
+    const startLatValue = document.querySelector('#startLat')?.value;
+    const startLonValue = document.querySelector('#startLon')?.value;
 
     const payload = {};
     if (dateValue) payload.date = dateValue;
-    if (startLatValue !== '') {
+    if (startLatValue !== undefined && startLatValue !== '') {
         const parsedLat = Number(startLatValue);
         if (!Number.isNaN(parsedLat)) payload.start_latitude = parsedLat;
     }
-    if (startLonValue !== '') {
+    if (startLonValue !== undefined && startLonValue !== '') {
         const parsedLon = Number(startLonValue);
         if (!Number.isNaN(parsedLon)) payload.start_longitude = parsedLon;
     }
@@ -458,41 +450,16 @@ async function generateRoute() {
         list.appendChild(item);
         showRouteWarnings([]);
     }
-
-    renderBarChart('breadsChart', summary.breads_by_day.map((item) => ({
-        label: item.day,
-        value: item.breads,
-    })));
-}
-
-async function generateRoute() {
-    const date = document.querySelector('#routeDate').value;
-    const startLat = Number(document.querySelector('#startLat').value) || undefined;
-    const startLon = Number(document.querySelector('#startLon').value) || undefined;
-    const payload = { date };
-    if (!Number.isNaN(startLat)) payload.start_latitude = startLat;
-    if (!Number.isNaN(startLon)) payload.start_longitude = startLon;
-    const route = await fetchJSON(`${API_BASE}/routes`, {
-        method: 'POST',
-        body: JSON.stringify(payload),
-    });
-    const list = document.querySelector('#routeList');
-    list.innerHTML = '';
-    route.forEach((stop, index) => {
-        const item = document.createElement('li');
-        item.innerHTML = `<strong>${index + 1}. ${stop.name}</strong><br><small>${stop.address || ''}</small>`;
-        list.appendChild(item);
-    });
- main
 }
 
 async function completeDelivery(id) {
-    const quantity = prompt('Quantos pães foram entregues?');
-    if (quantity === null) return;
+    const quantityValue = prompt('Quantos pães foram entregues?');
+    if (quantityValue === null) return;
+    const quantity = Number(quantityValue);
     const notes = prompt('Observações adicionais? (opcional)') || undefined;
     await fetchJSON(`${API_BASE}/deliveries/${id}/complete`, {
         method: 'POST',
-        body: JSON.stringify({ quantity: Number(quantity), notes }),
+        body: JSON.stringify({ quantity: Number.isNaN(quantity) ? null : quantity, notes }),
     });
     await Promise.all([loadDeliveries(), loadSummary(), generateRoute()]);
 }
@@ -506,6 +473,8 @@ function registerServiceWorker() {
 function setupInstallPrompt() {
     let deferredPrompt;
     const button = document.getElementById('installButton');
+    if (!button) return;
+    button.style.display = 'none';
     window.addEventListener('beforeinstallprompt', (event) => {
         event.preventDefault();
         deferredPrompt = event;
@@ -516,80 +485,71 @@ function setupInstallPrompt() {
         deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
         if (outcome === 'accepted') {
-            button.textContent = 'Instalado';
+            button.textContent = 'Aplicativo instalado';
+            button.disabled = true;
         }
         deferredPrompt = null;
     });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-codex/develop-web-system-for-bread-delivery-f4dix1
+document.addEventListener('DOMContentLoaded', async () => {
     initMap();
 
- main
     const clientForm = document.getElementById('clientForm');
-    clientForm.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        const payload = serializeForm(clientForm);
-        await fetchJSON(`${API_BASE}/clients`, {
-            method: 'POST',
-            body: JSON.stringify(payload),
+    if (clientForm) {
+        clientForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const payload = serializeForm(clientForm);
+            await fetchJSON(`${API_BASE}/clients`, {
+                method: 'POST',
+                body: JSON.stringify(payload),
+            });
+            clientForm.reset();
+            await loadClients();
+            await Promise.all([loadSummary(), generateRoute()]);
         });
-        clientForm.reset();
-        await loadClients();
-codex/develop-web-system-for-bread-delivery-f4dix1
-        await generateRoute();
- main
-    });
+    }
 
     const deliveryForm = document.getElementById('deliveryForm');
-    deliveryForm.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        const payload = serializeForm(deliveryForm);
-        await fetchJSON(`${API_BASE}/deliveries`, {
-            method: 'POST',
-            body: JSON.stringify(payload),
+    if (deliveryForm) {
+        deliveryForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const payload = serializeForm(deliveryForm);
+            await fetchJSON(`${API_BASE}/deliveries`, {
+                method: 'POST',
+                body: JSON.stringify(payload),
+            });
+            deliveryForm.reset();
+            await Promise.all([loadDeliveries(), loadSummary(), generateRoute()]);
         });
-        deliveryForm.reset();
-codex/develop-web-system-for-bread-delivery-f4dix1
-        await Promise.all([loadDeliveries(), loadSummary(), generateRoute()]);
-    });
+    }
 
-    document.getElementById('refreshClients').addEventListener('click', async () => {
+    document.getElementById('refreshClients')?.addEventListener('click', async () => {
         await loadClients();
         await generateRoute();
     });
 
+    document.getElementById('refreshDeliveries')?.addEventListener('click', loadDeliveries);
+    document.getElementById('refreshSummary')?.addEventListener('click', loadSummary);
+    document.getElementById('generateRoute')?.addEventListener('click', generateRoute);
 
-        await Promise.all([loadDeliveries(), loadSummary()]);
-    });
-
-    document.getElementById('refreshClients').addEventListener('click', loadClients);
- main
-    document.getElementById('refreshDeliveries').addEventListener('click', loadDeliveries);
-    document.getElementById('generateRoute').addEventListener('click', generateRoute);
-    document.getElementById('routeDate').addEventListener('change', () => {
+    document.getElementById('routeDate')?.addEventListener('change', () => {
         loadDeliveries();
-        generateRoute();
+        scheduleRouteUpdate(0);
     });
+    document.getElementById('startLat')?.addEventListener('input', () => scheduleRouteUpdate());
+    document.getElementById('startLon')?.addEventListener('input', () => scheduleRouteUpdate());
 
-codex/develop-web-system-for-bread-delivery-f4dix1
-    document.getElementById('selectIdeal').addEventListener('click', () => {
+    document.getElementById('selectIdeal')?.addEventListener('click', () => {
         const countInput = document.getElementById('idealCount');
-        const count = Number(countInput.value) || 3;
+        const count = countInput ? Number(countInput.value) || 3 : 3;
         selectIdealClients(count);
     });
 
     registerServiceWorker();
     setupInstallPrompt();
 
-    loadClients().then(() => generateRoute());
-
-    registerServiceWorker();
-    setupInstallPrompt();
-
-    loadClients();
-main
-    loadDeliveries();
-    loadSummary();
+    await loadClients();
+    await Promise.all([loadDeliveries(), loadSummary()]);
+    await generateRoute();
 });
