@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+backend/delivery.db
+node_modules/

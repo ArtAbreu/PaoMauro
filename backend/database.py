@@ -1,3 +1,7 @@
+"""SQLite helpers for the bakery delivery application."""
+
+from __future__ import annotations
+
 import sqlite3
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
@@ -35,7 +39,6 @@ CREATE TABLE IF NOT EXISTS driver_positions (
 );
 """
 
-codex/develop-web-system-for-bread-delivery-f4dix1
 IDEAL_SUPERMARKETS = (
     {
         "name": "Supermercado Ideal - Centro",
@@ -79,7 +82,6 @@ IDEAL_SUPERMARKETS = (
     },
 )
 
-main
 
 def get_connection() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH)
@@ -91,9 +93,7 @@ def initialize() -> None:
     conn = get_connection()
     try:
         conn.executescript(SCHEMA)
-codex/develop-web-system-for-bread-delivery-f4dix1
         seed_initial_clients(conn)
- main
         conn.commit()
     finally:
         conn.close()
@@ -127,7 +127,6 @@ def execute(query: str, params: Iterable[Any] = ()) -> int:
         return cur.lastrowid
     finally:
         conn.close()
- codex/develop-web-system-for-bread-delivery-f4dix1
 
 
 def seed_initial_clients(conn: sqlite3.Connection) -> None:
@@ -145,4 +144,3 @@ def seed_initial_clients(conn: sqlite3.Connection) -> None:
             """,
             client,
         )
-main

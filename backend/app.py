@@ -1,11 +1,16 @@
 import json
+import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
 
-from database import execute, fetch_all, fetch_one, initialize
-from routes_logic import nearest_neighbor_route
+if __package__ in (None, ""):
+    from database import execute, fetch_all, fetch_one, initialize
+    from routes_logic import nearest_neighbor_route
+else:
+    from .database import execute, fetch_all, fetch_one, initialize
+    from .routes_logic import nearest_neighbor_route
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 DEFAULT_START = (-23.55052, -46.633308)  # São Paulo como ponto inicial padrão
@@ -378,10 +383,24 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(f.read())
 
 
+def _resolve_port(default: int) -> int:
+    """Return the port informed by the PORT environment variable if present."""
+
+    env_port = os.environ.get("PORT")
+    if not env_port:
+        return default
+
+    try:
+        return int(env_port)
+    except ValueError:
+        return default
+
+
 def run(host: str = "0.0.0.0", port: int = 8000) -> None:
+    resolved_port = _resolve_port(port)
     initialize()
-    server = ThreadingHTTPServer((host, port), RequestHandler)
-    print(f"Servidor iniciado em http://{host}:{port}")
+    server = ThreadingHTTPServer((host, resolved_port), RequestHandler)
+    print(f"Servidor iniciado em http://{host}:{resolved_port}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
