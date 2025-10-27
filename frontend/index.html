@@ -77,17 +77,27 @@
                         <input type="tel" name="phone" />
                     </label>
                     <label>Endereço
-                        <input type="text" name="address" />
+                        <input type="text" name="address" id="clientAddress" autocomplete="street-address" />
                     </label>
                     <label>Latitude
-                        <input type="number" name="latitude" step="0.000001" />
+                        <input type="number" name="latitude" step="0.000001" id="clientLatitude" />
                     </label>
                     <label>Longitude
-                        <input type="number" name="longitude" step="0.000001" />
+                        <input type="number" name="longitude" step="0.000001" id="clientLongitude" />
                     </label>
                     <label>Observações
                         <input type="text" name="notes" />
                     </label>
+                </div>
+                <div class="map-picker" id="clientMapPicker">
+                    <div class="map-picker__header">
+                        <button type="button" id="openClientMap">Selecionar localização no mapa</button>
+                        <p class="muted">Pesquise o endereço ou arraste o marcador para ajustar a posição.</p>
+                    </div>
+                    <div class="map-picker__canvas" id="clientMapWrapper" hidden>
+                        <div id="clientMap" aria-label="Selecionar localização no Google Maps"></div>
+                    </div>
+                    <p class="map-picker__status" id="clientMapStatus" hidden></p>
                 </div>
                 <div class="form-actions">
                     <button type="submit">Adicionar cliente</button>
@@ -218,7 +228,26 @@
         crossorigin=""
         defer
     ></script>
-    <script src="/app.js" defer></script>
-    <script src="/chart.js" defer></script>
+    <script>
+        window.__googleMapsCallbacks = [];
+        window.initGoogleMaps = function initGoogleMaps() {
+            window.__googleMapsLoaded = true;
+            window.__googleMapsCallbacks.forEach((callback) => {
+                try {
+                    callback();
+                } catch (error) {
+                    console.error('Erro ao inicializar Google Maps', error);
+                }
+            });
+            window.__googleMapsCallbacks.length = 0;
+        };
+    </script>
+    <script
+        src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&libraries=places&callback=initGoogleMaps"
+        async
+        defer
+        onerror="window.__googleMapsLoadError = true;"
+    ></script>
+    <script type="module" src="/app.js"></script>
 </body>
 </html>

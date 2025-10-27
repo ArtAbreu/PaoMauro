@@ -1,9 +1,13 @@
+import { renderBarChart } from './chart.js';
+import { createClientMapPicker } from './maps.js';
+
 const API_BASE = '/api';
 const DEFAULT_START = { latitude: -23.55052, longitude: -46.633308 };
 
 let map;
 let markersLayer;
 let routeLayer;
+let clientLocationPicker;
 const markerByClientId = new Map();
 const checkboxByClientId = new Map();
 const selectedClientIds = new Set();
@@ -111,6 +115,32 @@ function scheduleRouteUpdate(delay = 250) {
     routeUpdateTimeout = setTimeout(() => {
         generateRoute();
     }, delay);
+}
+
+function setupClientMapPicker() {
+    const mapElement = document.getElementById('clientMap');
+    const wrapperElement = document.getElementById('clientMapWrapper');
+    const triggerElement = document.getElementById('openClientMap');
+    const addressInput = document.getElementById('clientAddress');
+    const latitudeInput = document.getElementById('clientLatitude');
+    const longitudeInput = document.getElementById('clientLongitude');
+    const statusElement = document.getElementById('clientMapStatus');
+    if (!mapElement || !addressInput || !latitudeInput || !longitudeInput) {
+        return null;
+    }
+    return createClientMapPicker({
+        mapElement,
+        wrapperElement,
+        triggerElement,
+        addressInput,
+        latitudeInput,
+        longitudeInput,
+        statusElement,
+        defaultCenter: {
+            lat: DEFAULT_START.latitude,
+            lng: DEFAULT_START.longitude,
+        },
+    });
 }
 
 function setClientSelection(rawClientId, isSelected) {
@@ -494,19 +524,25 @@ function setupInstallPrompt() {
 
 document.addEventListener('DOMContentLoaded', async () => {
     initMap();
+    clientLocationPicker = setupClientMapPicker();
 
     const clientForm = document.getElementById('clientForm');
     if (clientForm) {
         clientForm.addEventListener('submit', async (event) => {
             event.preventDefault();
+            clientLocationPicker?.syncMarkerFromInputs?.();
             const payload = serializeForm(clientForm);
             await fetchJSON(`${API_BASE}/clients`, {
                 method: 'POST',
                 body: JSON.stringify(payload),
             });
             clientForm.reset();
+            clientLocationPicker?.reset?.();
             await loadClients();
             await Promise.all([loadSummary(), generateRoute()]);
+        });
+        clientForm.addEventListener('reset', () => {
+            clientLocationPicker?.reset?.();
         });
     }
 

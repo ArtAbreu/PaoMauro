@@ -71,14 +71,16 @@ class RequestHandler(BaseHTTPRequestHandler):
         client_id = parsed.path.split("/")[-1]
         length = int(self.headers.get("Content-Length", 0))
         payload = json.loads(self.rfile.read(length) or b"{}")
+        latitude = self._normalize_coordinate(payload.get("latitude"))
+        longitude = self._normalize_coordinate(payload.get("longitude"))
         execute(
             "UPDATE clients SET name = ?, phone = ?, address = ?, latitude = ?, longitude = ?, notes = ? WHERE id = ?",
             (
                 payload.get("name"),
                 payload.get("phone"),
                 payload.get("address"),
-                payload.get("latitude"),
-                payload.get("longitude"),
+                latitude,
+                longitude,
                 payload.get("notes"),
                 client_id,
             ),
@@ -132,15 +134,25 @@ class RequestHandler(BaseHTTPRequestHandler):
             self._set_headers(404)
             self.wfile.write(json.dumps({"error": "Endpoint não encontrado"}).encode())
 
+    def _normalize_coordinate(self, value: Optional[float]) -> Optional[float]:
+        if value in (None, ""):
+            return None
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
     def create_client(self, payload: Dict) -> None:
+        latitude = self._normalize_coordinate(payload.get("latitude"))
+        longitude = self._normalize_coordinate(payload.get("longitude"))
         client_id = execute(
             "INSERT INTO clients (name, phone, address, latitude, longitude, notes) VALUES (?, ?, ?, ?, ?, ?)",
             (
                 payload.get("name"),
                 payload.get("phone"),
                 payload.get("address"),
-                payload.get("latitude"),
-                payload.get("longitude"),
+                latitude,
+                longitude,
                 payload.get("notes"),
             ),
         )

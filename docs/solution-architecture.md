@@ -9,7 +9,7 @@ O sistema permitirá que o administrador cadastre clientes, organize rotas diár
 | --- | --- | --- |
 | Frontend | **Next.js 14** com React, TypeScript e app router | SSR/SSG para telas administrativas, geração do PWA com suporte a offline e push notifications. |
 | UI/UX | Tailwind CSS + Headless UI | Criação rápida de interfaces responsivas e componentes acessíveis. |
-| Mapas | Leaflet + OpenStreetMap | Sem custo por uso, personalizável. Pode-se trocar para Google Maps caso já exista conta. |
+| Mapas | Google Maps JavaScript API + Places (cadastro) e Leaflet + OpenStreetMap (visualização de rotas) | Autocomplete confiável no cadastro de clientes com possibilidade de manter tiles abertos para o mapa operacional. |
 | Backend | **NestJS** (Node.js + TypeScript) | Modular, fácil de integrar com WebSockets e filas. |
 | Banco de dados | PostgreSQL 15 + Prisma ORM | Tipado, suporta consultas geoespaciais (extensão PostGIS) e integra bem com NestJS. |
 | Armazenamento de rotas | Redis (opcional) | Cache de rotas otimizadas e sessões ativas do motorista. |
@@ -21,7 +21,7 @@ O sistema permitirá que o administrador cadastre clientes, organize rotas diár
 1. **Gestão de clientes**
    - CRUD completo.
    - Campos: nome, telefone, endereço, geolocalização (latitude/longitude), observações.
-   - Geocodificação automática ao salvar endereço (API Nominatim/Google Geocoding).
+   - Geocodificação automática ao salvar endereço (Google Places integrado ao cadastro atual).
 
 2. **Planejamento de rotas**
    - Tela para selecionar data, clientes e ordem sugerida.
@@ -152,4 +152,10 @@ O sistema permitirá que o administrador cadastre clientes, organize rotas diár
 2. Definir orçamento para APIs de roteirização (gratuito vs pago).
 3. Preparar ambiente de desenvolvimento com Docker.
 4. Construir MVP incrementalmente, priorizando cadastro de clientes, rota manual e confirmação de entregas.
+
+## 13. Configuração do Google Maps no MVP atual
+
+- A tela de cadastro consome o **Google Maps JavaScript API** com a biblioteca **Places** para sugerir endereços e preencher latitude/longitude automaticamente.
+- Defina a chave em `frontend/index.html` (substituir `YOUR_GOOGLE_MAPS_API_KEY`) antes de subir o ambiente de produção.
+- Caso não seja possível utilizar o Google Maps em algum ambiente, os campos continuam editáveis manualmente; o status no formulário informa quando o SDK não pôde ser carregado.
 
