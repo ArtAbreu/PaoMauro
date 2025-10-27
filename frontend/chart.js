@@ -1,4 +1,4 @@
-function renderBarChart(canvasId, data) {
+export function renderBarChart(canvasId, data) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) return;
     const ctx = canvas.getContext('2d');

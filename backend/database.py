@@ -93,6 +93,7 @@ def initialize() -> None:
     conn = get_connection()
     try:
         conn.executescript(SCHEMA)
+        ensure_client_coordinate_columns(conn)
         seed_initial_clients(conn)
         conn.commit()
     finally:
@@ -127,6 +128,17 @@ def execute(query: str, params: Iterable[Any] = ()) -> int:
         return cur.lastrowid
     finally:
         conn.close()
+
+
+def ensure_client_coordinate_columns(conn: sqlite3.Connection) -> None:
+    columns = {
+        row["name"]
+        for row in conn.execute("PRAGMA table_info(clients)")
+    }
+    if "latitude" not in columns:
+        conn.execute("ALTER TABLE clients ADD COLUMN latitude REAL")
+    if "longitude" not in columns:
+        conn.execute("ALTER TABLE clients ADD COLUMN longitude REAL")
 
 
 def seed_initial_clients(conn: sqlite3.Connection) -> None:
