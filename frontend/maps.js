@@ -1,6 +1,75 @@
 const DEFAULT_CENTER = { lat: -23.55052, lng: -46.633308 };
 const MAP_LOAD_TIMEOUT = 15000;
 
+let googleMapsPromise = null;
+let configPromise = null;
+
+async function fetchConfig() {
+    if (!configPromise) {
+        configPromise = fetch('/api/config')
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error('Não foi possível carregar a configuração do mapa.');
+                }
+                return response.json();
+            })
+            .catch((error) => {
+                configPromise = null;
+                throw error;
+            });
+    }
+    return configPromise;
+}
+
+function injectGoogleMapsScript(apiKey, libraries = ['places', 'geometry']) {
+    return new Promise((resolve, reject) => {
+        if (!apiKey) {
+            reject(new Error('Configure a variável GOOGLE_MAPS_API_KEY para usar o mapa.'));
+            return;
+        }
+
+        if (document.querySelector('script[data-google-maps-sdk]')) {
+            resolve();
+            return;
+        }
+
+        const script = document.createElement('script');
+        const params = new URLSearchParams({
+            key: apiKey,
+            libraries: libraries.join(','),
+        });
+        script.src = `https://maps.googleapis.com/maps/api/js?${params.toString()}`;
+        script.async = true;
+        script.defer = true;
+        script.setAttribute('data-google-maps-sdk', 'true');
+        script.addEventListener('error', () => {
+            script.remove();
+            reject(new Error('Erro ao carregar o SDK do Google Maps.'));
+        });
+        script.addEventListener('load', () => {
+            resolve();
+        });
+        document.head.appendChild(script);
+    });
+}
+
+export async function ensureGoogleMaps() {
+    if (window.google?.maps?.Map) {
+        return window.google.maps;
+    }
+    if (!googleMapsPromise) {
+        googleMapsPromise = (async () => {
+            const config = await fetchConfig();
+            await injectGoogleMapsScript(config.google_maps_api_key);
+            return waitForGoogleMaps();
+        })().catch((error) => {
+            googleMapsPromise = null;
+            throw error;
+        });
+    }
+    return googleMapsPromise;
+}
+
 function parseCoordinate(value) {
     if (value == null || value === '') return null;
     const parsed = Number(value);
@@ -32,38 +101,17 @@ function waitForGoogleMaps(timeout = MAP_LOAD_TIMEOUT) {
             return;
         }
 
-        if (window.__googleMapsLoadError) {
-            reject(new Error('O SDK do Google Maps não pôde ser carregado.'));
-            return;
-        }
-
-        const callbacks = Array.isArray(window.__googleMapsCallbacks)
-            ? window.__googleMapsCallbacks
-            : (window.__googleMapsCallbacks = []);
-
-        const timer = window.setTimeout(() => {
-            reject(new Error('Tempo limite ao carregar o Google Maps.'));
-        }, timeout);
-
-        const handleReady = () => {
-            window.clearTimeout(timer);
-            if (window.google?.maps) {
-                if (!window.google.maps.places) {
-                    reject(new Error('Biblioteca Places não disponível.'));
-                    return;
-                }
+        const start = Date.now();
+        const check = () => {
+            if (window.google?.maps?.places) {
                 resolve(window.google.maps);
+            } else if (Date.now() - start > timeout) {
+                reject(new Error('Tempo limite ao carregar o Google Maps.'));
             } else {
-                reject(new Error('Google Maps não disponível.'));
+                window.requestAnimationFrame(check);
             }
         };
-
-        if (window.__googleMapsLoaded && window.google?.maps) {
-            handleReady();
-            return;
-        }
-
-        callbacks.push(handleReady);
+        check();
     });
 }
 
@@ -151,7 +199,7 @@ export function createClientMapPicker(options = {}) {
             return mapInstance;
         }
         try {
-            googleMaps = await waitForGoogleMaps();
+            googleMaps = await ensureGoogleMaps();
         } catch (error) {
             showStatusMessage(statusElement, error.message, 'error');
             throw error;

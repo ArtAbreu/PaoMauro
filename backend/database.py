@@ -37,6 +37,20 @@ CREATE TABLE IF NOT EXISTS driver_positions (
     latitude REAL NOT NULL,
     longitude REAL NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS delivery_visits (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    delivery_id INTEGER,
+    client_id INTEGER,
+    detected_at TEXT DEFAULT (datetime('now')),
+    confirmed_at TEXT,
+    stay_seconds INTEGER,
+    quantity INTEGER,
+    notes TEXT,
+    status TEXT NOT NULL DEFAULT 'detected',
+    FOREIGN KEY (delivery_id) REFERENCES deliveries(id),
+    FOREIGN KEY (client_id) REFERENCES clients(id)
+);
 """
 
 IDEAL_SUPERMARKETS = (
@@ -93,6 +107,7 @@ def initialize() -> None:
     conn = get_connection()
     try:
         conn.executescript(SCHEMA)
+        ensure_delivery_tracking_columns(conn)
         ensure_client_coordinate_columns(conn)
         seed_initial_clients(conn)
         conn.commit()
@@ -139,6 +154,19 @@ def ensure_client_coordinate_columns(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE clients ADD COLUMN latitude REAL")
     if "longitude" not in columns:
         conn.execute("ALTER TABLE clients ADD COLUMN longitude REAL")
+
+
+def ensure_delivery_tracking_columns(conn: sqlite3.Connection) -> None:
+    columns = {
+        row["name"]
+        for row in conn.execute("PRAGMA table_info(deliveries)")
+    }
+    if "arrived_at" not in columns:
+        conn.execute("ALTER TABLE deliveries ADD COLUMN arrived_at TEXT")
+    if "departed_at" not in columns:
+        conn.execute("ALTER TABLE deliveries ADD COLUMN departed_at TEXT")
+    if "stay_seconds" not in columns:
+        conn.execute("ALTER TABLE deliveries ADD COLUMN stay_seconds INTEGER")
 
 
 def seed_initial_clients(conn: sqlite3.Connection) -> None:

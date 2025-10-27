@@ -12,12 +12,6 @@
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
         rel="stylesheet"
     />
-    <link
-        rel="stylesheet"
-        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-        integrity="sha256-o9N1j7kG9z8zcb2Yh3lPjUuyPz7Fu7zyFFf0zPBC3uU="
-        crossorigin=""
-    />
 </head>
 <body>
     <header class="app-header">
@@ -162,6 +156,11 @@
                     <h3>Ordem sugerida</h3>
                     <ol id="routeList"></ol>
                     <div id="routeWarnings" class="route-warnings"></div>
+                    <div class="driver-status" id="driverStatus" hidden>
+                        <h4>Progresso em tempo real</h4>
+                        <p class="muted" id="driverMessage"></p>
+                        <ul id="driverStops" class="driver-stops"></ul>
+                    </div>
                 </aside>
             </div>
         </section>
@@ -222,32 +221,6 @@
         </tr>
     </template>
 
-    <script
-        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-        integrity="sha256-o9N1j7kG9z8zcb2Yh3lPjUuyPz7Fu7zyFFf0zPBC3uU="
-        crossorigin=""
-        defer
-    ></script>
-    <script>
-        window.__googleMapsCallbacks = [];
-        window.initGoogleMaps = function initGoogleMaps() {
-            window.__googleMapsLoaded = true;
-            window.__googleMapsCallbacks.forEach((callback) => {
-                try {
-                    callback();
-                } catch (error) {
-                    console.error('Erro ao inicializar Google Maps', error);
-                }
-            });
-            window.__googleMapsCallbacks.length = 0;
-        };
-    </script>
-    <script
-        src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&libraries=places&callback=initGoogleMaps"
-        async
-        defer
-        onerror="window.__googleMapsLoadError = true;"
-    ></script>
     <script type="module" src="/app.js"></script>
 </body>
 </html>

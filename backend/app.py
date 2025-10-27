@@ -1,5 +1,6 @@
 import json
 import os
+from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
@@ -7,13 +8,19 @@ from urllib.parse import parse_qs, urlparse
 
 if __package__ in (None, ""):
     from database import execute, fetch_all, fetch_one, initialize
-    from routes_logic import nearest_neighbor_route
+    from routes_logic import detect_visit_events, nearest_neighbor_route, optimize_route_with_google
 else:
     from .database import execute, fetch_all, fetch_one, initialize
-    from .routes_logic import nearest_neighbor_route
+    from .routes_logic import detect_visit_events, nearest_neighbor_route, optimize_route_with_google
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 DEFAULT_START = (-23.55052, -46.633308)  # São Paulo como ponto inicial padrão
+GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
+STATUS_LABELS = {
+    "pending": "Pendente",
+    "arrived": "Parada detectada",
+    "completed": "Concluída",
+}
 
 
 class RequestHandler(BaseHTTPRequestHandler):
@@ -124,12 +131,20 @@ class RequestHandler(BaseHTTPRequestHandler):
             summary = self.build_metrics_summary()
             self._set_headers(200)
             self.wfile.write(json.dumps(summary).encode())
+        elif parsed.path == "/api/config":
+            config = {"google_maps_api_key": GOOGLE_MAPS_API_KEY}
+            self._set_headers(200)
+            self.wfile.write(json.dumps(config).encode())
         elif parsed.path == "/api/driver/location":
             positions = fetch_all(
                 "SELECT * FROM driver_positions ORDER BY timestamp DESC LIMIT 20"
             )
+            payload = {
+                "positions": positions,
+                "progress": self._build_progress_payload(),
+            }
             self._set_headers(200)
-            self.wfile.write(json.dumps(positions).encode())
+            self.wfile.write(json.dumps(payload).encode())
         else:
             self._set_headers(404)
             self.wfile.write(json.dumps({"error": "Endpoint não encontrado"}).encode())
@@ -187,7 +202,14 @@ class RequestHandler(BaseHTTPRequestHandler):
         notes = payload.get("notes")
         execute(
             "UPDATE deliveries SET status = 'completed', quantity = COALESCE(?, quantity), "
-            "notes = COALESCE(?, notes), completed_at = datetime('now') WHERE id = ?",
+            "notes = COALESCE(?, notes), completed_at = datetime('now'), "
+            "departed_at = COALESCE(departed_at, datetime('now')) WHERE id = ?",
+            (quantity, notes, delivery_id),
+        )
+        execute(
+            "UPDATE delivery_visits SET status = 'confirmed', confirmed_at = datetime('now'), "
+            "quantity = COALESCE(?, quantity), notes = COALESCE(?, notes) "
+            "WHERE delivery_id = ? AND status IN ('detected', 'awaiting_confirmation')",
             (quantity, notes, delivery_id),
         )
         delivery = fetch_one(
@@ -195,12 +217,16 @@ class RequestHandler(BaseHTTPRequestHandler):
             "JOIN clients ON clients.id = deliveries.client_id WHERE deliveries.id = ?",
             (delivery_id,),
         )
+        response = {
+            "delivery": delivery,
+            "progress": self._build_progress_payload(),
+        }
         self._set_headers(200)
-        self.wfile.write(json.dumps(delivery).encode())
+        self.wfile.write(json.dumps(response).encode())
 
     def record_location(self, payload: Dict) -> None:
-        latitude = payload.get("latitude")
-        longitude = payload.get("longitude")
+        latitude = self._normalize_coordinate(payload.get("latitude"))
+        longitude = self._normalize_coordinate(payload.get("longitude"))
         if latitude is None or longitude is None:
             self._set_headers(400)
             self.wfile.write(json.dumps({"error": "latitude e longitude são obrigatórios"}).encode())
@@ -209,8 +235,15 @@ class RequestHandler(BaseHTTPRequestHandler):
             "INSERT INTO driver_positions (latitude, longitude) VALUES (?, ?)",
             (latitude, longitude),
         )
+        pending_confirmations = self._detect_and_register_visits()
+        response = {
+            "status": "ok",
+            "pending_confirmations": pending_confirmations,
+            "progress": self._build_progress_payload(),
+            "last_position": {"latitude": latitude, "longitude": longitude},
+        }
         self._set_headers(201)
-        self.wfile.write(json.dumps({"status": "ok"}).encode())
+        self.wfile.write(json.dumps(response).encode())
 
     def generate_route(self, payload: Dict) -> None:
         start_lat = self._parse_float(payload.get("start_latitude"), DEFAULT_START[0])
@@ -236,12 +269,28 @@ class RequestHandler(BaseHTTPRequestHandler):
             if client.get("latitude") is None or client.get("longitude") is None
         ]
 
-        ordered = nearest_neighbor_route((start_lat, start_lon), with_coordinates)
+        ordered, directions = optimize_route_with_google(
+            GOOGLE_MAPS_API_KEY,
+            (start_lat, start_lon),
+            with_coordinates,
+        )
+
+        if not ordered and with_coordinates:
+            ordered = nearest_neighbor_route((start_lat, start_lon), with_coordinates)
+            directions = None
+
+        self._apply_status_labels(ordered)
+        self._apply_status_labels(missing_coordinates)
+
+        progress_reference: List[Dict] = list(ordered) if ordered else list(clients)
+        progress = self._build_progress_payload(progress_reference)
 
         response = {
             "start": {"latitude": start_lat, "longitude": start_lon},
             "ordered": ordered,
             "skipped": missing_coordinates,
+            "directions": directions,
+            "progress": progress,
         }
 
         self._set_headers(200)
@@ -390,9 +439,168 @@ class RequestHandler(BaseHTTPRequestHandler):
             content_type = "image/png"
         elif file_path.suffix == ".svg":
             content_type = "image/svg+xml"
-        self._set_headers(200, content_type)
-        with file_path.open("rb") as f:
-            self.wfile.write(f.read())
+            self._set_headers(200, content_type)
+            with file_path.open("rb") as f:
+                self.wfile.write(f.read())
+
+
+    def _client_identifier(self, client: Dict) -> Optional[int]:
+        value = client.get("client_id") or client.get("id")
+        try:
+            return int(value) if value is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    def _apply_status_labels(self, clients: Iterable[Dict]) -> None:
+        for client in clients:
+            status = client.get("status") or "pending"
+            label = STATUS_LABELS.get(status, status.title())
+            client["status"] = status
+            client["status_label"] = label
+
+    def _get_recent_positions(self) -> List[Dict]:
+        return fetch_all(
+            "SELECT * FROM driver_positions WHERE timestamp >= datetime('now', '-20 minutes') ORDER BY timestamp ASC"
+        )
+
+    def _get_active_deliveries(self) -> List[Dict]:
+        return fetch_all(
+            "SELECT deliveries.*, clients.latitude, clients.longitude, clients.name as client_name "
+            "FROM deliveries JOIN clients ON deliveries.client_id = clients.id "
+            "WHERE deliveries.status != 'completed' "
+            "ORDER BY deliveries.scheduled_date ASC, deliveries.id ASC",
+        )
+
+    def _fetch_pending_confirmations(self) -> List[Dict]:
+        return fetch_all(
+            "SELECT delivery_visits.*, clients.name as client_name "
+            "FROM delivery_visits JOIN clients ON clients.id = delivery_visits.client_id "
+            "WHERE delivery_visits.status = 'awaiting_confirmation' "
+            "ORDER BY delivery_visits.detected_at ASC",
+        )
+
+    def _detect_and_register_visits(self) -> List[Dict]:
+        positions = self._get_recent_positions()
+        deliveries = self._get_active_deliveries()
+        if not positions or not deliveries:
+            return self._fetch_pending_confirmations()
+        detections = detect_visit_events(positions, deliveries)
+        if not detections:
+            return self._fetch_pending_confirmations()
+
+        deliveries_by_id = {
+            int(delivery["id"]): delivery for delivery in deliveries if delivery.get("id") is not None
+        }
+        for detection in detections:
+            delivery = deliveries_by_id.get(detection.delivery_id)
+            if not delivery:
+                continue
+            if delivery.get("status") == "completed":
+                continue
+            detected_at = detection.detected_at.isoformat(timespec="seconds")
+            existing_visit = fetch_one(
+                "SELECT * FROM delivery_visits WHERE delivery_id = ? AND status IN ('detected','awaiting_confirmation') "
+                "ORDER BY detected_at DESC LIMIT 1",
+                (detection.delivery_id,),
+            )
+            if existing_visit:
+                execute(
+                    "UPDATE delivery_visits SET stay_seconds = ?, detected_at = ? WHERE id = ?",
+                    (detection.stay_seconds, detected_at, existing_visit["id"]),
+                )
+                visit_id = existing_visit["id"]
+            else:
+                visit_id = execute(
+                    "INSERT INTO delivery_visits (delivery_id, client_id, stay_seconds, status, detected_at) "
+                    "VALUES (?, ?, ?, 'awaiting_confirmation', ?)",
+                    (
+                        detection.delivery_id,
+                        detection.client_id,
+                        detection.stay_seconds,
+                        detected_at,
+                    ),
+                )
+            execute(
+                "UPDATE delivery_visits SET status = 'awaiting_confirmation' WHERE id = ?",
+                (visit_id,),
+            )
+            execute(
+                "UPDATE deliveries SET status = 'arrived', arrived_at = COALESCE(arrived_at, ?), "
+                "stay_seconds = COALESCE(?, stay_seconds) WHERE id = ? AND status != 'completed'",
+                (detected_at, detection.stay_seconds, detection.delivery_id),
+            )
+        return self._fetch_pending_confirmations()
+
+    def _build_progress_payload(self, ordered: Optional[List[Dict]] = None) -> Optional[Dict]:
+        candidates: List[Dict]
+        if ordered:
+            seen_ids = {
+                cid
+                for cid in (
+                    self._client_identifier(client)
+                    for client in ordered
+                )
+                if cid is not None
+            }
+            extra = [
+                delivery
+                for delivery in self._get_active_deliveries()
+                if self._client_identifier(delivery) not in seen_ids
+            ]
+            candidates = list(ordered) + extra
+        else:
+            candidates = self._get_active_deliveries()
+
+        if not candidates:
+            pending_visits = self._fetch_pending_confirmations()
+            message = (
+                "Visitas aguardando confirmação." if pending_visits else "Cadastre entregas para iniciar a rota."
+            )
+            return {
+                "message": message,
+                "stops": [],
+                "next_client_id": None,
+            }
+
+        self._apply_status_labels(candidates)
+
+        stops: List[Dict] = []
+        next_client_id: Optional[int] = None
+        for client in candidates:
+            client_id = self._client_identifier(client)
+            if client_id is None:
+                continue
+            status = client.get("status") or "pending"
+            label = client.get("status_label") or STATUS_LABELS.get(status, status.title())
+            stops.append(
+                {
+                    "client_id": client_id,
+                    "client_name": client.get("client_name") or client.get("name"),
+                    "status": status,
+                    "status_label": label,
+                    "quantity": client.get("quantity"),
+                    "arrived_at": client.get("arrived_at"),
+                    "completed_at": client.get("completed_at"),
+                }
+            )
+            if next_client_id is None and status != "completed":
+                next_client_id = client_id
+
+        if next_client_id is None:
+            message = "Todas as entregas desta rota foram concluídas."
+        else:
+            next_client = next(
+                (stop for stop in stops if stop["client_id"] == next_client_id),
+                None,
+            )
+            client_name = next_client.get("client_name") if next_client else "cliente"
+            message = f"Próxima parada: {client_name}."
+
+        return {
+            "message": message,
+            "stops": stops,
+            "next_client_id": next_client_id,
+        }
 
 
 def _resolve_port(default: int) -> int:

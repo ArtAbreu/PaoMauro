@@ -385,10 +385,6 @@ button.ghost:hover {
     height: 100%;
 }
 
-.leaflet-container {
-    font: inherit;
-}
-
 .route-panel {
     display: flex;
     flex-direction: column;
@@ -442,6 +438,40 @@ button.ghost:hover {
 .route-warnings ul {
     margin: 0;
     padding-left: 1.1rem;
+}
+
+.driver-status {
+    background: rgba(226, 232, 240, 0.45);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.driver-status h4 {
+    margin: 0 0 0.35rem;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.driver-stops {
+    list-style: none;
+    margin: 0.75rem 0 0;
+    padding: 0;
+    display: grid;
+    gap: 0.5rem;
+}
+
+.driver-stops li {
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 0.65rem;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    font-size: 0.92rem;
+}
+
+.driver-stops li strong {
+    display: block;
+    font-weight: 600;
 }
 
 .complete-delivery {
