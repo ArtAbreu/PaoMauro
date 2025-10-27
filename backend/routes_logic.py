@@ -1,4 +1,4 @@
-from math import radians, cos, sin, asin, sqrt
+from math import asin, cos, radians, sin, sqrt
 from typing import Dict, List, Tuple
 
 
@@ -15,21 +15,17 @@ def haversine_distance(origin: Tuple[float, float], destination: Tuple[float, fl
 
 
 def nearest_neighbor_route(start: Tuple[float, float], clients: List[Dict]) -> List[Dict]:
-codex/develop-web-system-for-bread-delivery-f4dix1
     remaining = [
         client
         for client in clients
         if client.get("latitude") is not None and client.get("longitude") is not None
     ]
 
-    remaining = clients.copy()
- main
     ordered: List[Dict] = []
     current = start
     while remaining:
         nearest = min(
             remaining,
-codex/develop-web-system-for-bread-delivery-f4dix1
             key=lambda client: haversine_distance(
                 current,
                 (float(client.get("latitude")), float(client.get("longitude"))),
@@ -37,11 +33,5 @@ codex/develop-web-system-for-bread-delivery-f4dix1
         )
         ordered.append(nearest)
         current = (float(nearest.get("latitude")), float(nearest.get("longitude")))
-
-            key=lambda client: haversine_distance(current, (client.get("latitude") or 0, client.get("longitude") or 0)),
-        )
-        ordered.append(nearest)
-        current = (nearest.get("latitude") or 0, nearest.get("longitude") or 0)
- main
         remaining.remove(nearest)
     return ordered
