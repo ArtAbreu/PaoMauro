@@ -1,0 +1,17 @@
+{
+  "name": "pao do mauro",
+  "short_name": "pao do mauro",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#f97316",
+  "lang": "pt-BR",
+  "description": "Organização empresarial para padarias artesanais.",
+  "icons": [
+    {
+      "src": "/app-icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

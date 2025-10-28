@@ -1,80 +1,105 @@
-# Sistema Web de Rotas e Entregas da Fábrica de Pães
+# pao-do-mauro — Sistema de Organização Empresarial
 
-Este repositório contém uma aplicação web completa (backend em Python + frontend em HTML/CSS/JS) para organizar os clientes, planejar rotas e controlar entregas de pães em tempo real.
+Sistema completo para gestão de padarias familiares cobrindo vendas, produção, estoque, financeiro e relatórios.
 
-## Visão geral
+## Requisitos
+- Node.js 20+
+- PostgreSQL 14+
 
-- **Backend**: servidor HTTP em Python puro com SQLite para persistência (`backend/app.py`). Expõe endpoints REST para clientes, entregas, rotas, métricas e rastreamento de localização do motorista.
-- **Frontend**: aplicação responsiva com Progressive Web App (PWA) em `frontend/`. Permite cadastrar clientes, planejar rotas diárias, registrar entregas e consultar indicadores de desempenho.
-- **Banco de dados**: SQLite (arquivo `backend/delivery.db`, criado automaticamente).
+## Configuração
+1. Copie `.env.example` para `.env` e ajuste as variáveis.
+2. Instale dependências: `npm install`.
+3. Gere o cliente Prisma: `npx prisma generate`.
+4. Aplique migrações: `npm run prisma:migrate`.
+5. Popule dados de exemplo: `npm run prisma:seed`.
 
-## Como executar
+A senha do usuário administrador (`admin@paodomauro.com`) será exibida no terminal ao rodar o seed. No primeiro login será solicitado o reset.
 
-1. **Criar ambiente** (opcional, mas recomendado)
+### Variáveis de ambiente
+| Variável | Descrição |
+| --- | --- |
+| `DATABASE_URL` | URL de conexão PostgreSQL (produção e desenvolvimento). |
+| `NEXTAUTH_URL` | URL pública da aplicação. |
+| `NEXTAUTH_SECRET` | Segredo criptográfico para assinar JWTs. |
+| `AUTH_EMAIL_FROM` | Remetente dos e-mails transacionais. |
+| `AUTH_EMAIL_SERVER` | Configuração SMTP para envio de e-mails (recuperação de senha). |
+| `RATE_LIMIT_WINDOW_MS` | Janela de tempo do rate limiter em ms. |
+| `RATE_LIMIT_MAX_API` | Requisições permitidas por janela para rotas API. |
+| `RATE_LIMIT_MAX_LOGIN` | Tentativas permitidas por janela na rota de login. |
 
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate
-   ```
+## Desenvolvimento
+```bash
+npm run dev
+```
 
-2. **Instalar dependências**
+Acesse `http://localhost:3000`.
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+## Testes
+```bash
+npm run test
+```
 
-3. **Configurar a chave do Google Maps**
+Os testes cobrem cálculos de custos e limites de requisições críticos para as regras de negócio. Adicione `DATABASE_URL` apontando para um banco isolado antes de criar testes de integração.
 
-   A interface usa os serviços JavaScript, Places e Directions do Google Maps. Exporte a chave antes de iniciar o backend:
+## Build e produção local
+```bash
+npm run build
+npm run start
+```
 
-   ```bash
-   export GOOGLE_MAPS_API_KEY="sua_chave_aqui"
-   ```
+## Deploy na Render
+O repositório inclui `Dockerfile` e `render.yaml`. Faça push para o GitHub e crie um serviço web no Render apontando para o repositório. O banco é provisionado automaticamente com base na configuração do arquivo de manifesto.
 
-4. **Iniciar o servidor**
+### Passos adicionais de deploy
+1. Configure as variáveis de ambiente conforme a tabela acima.
+2. Execute `npm run prisma:migrate` no dashboard da Render após o primeiro deploy para aplicar migrações.
+3. Rode `npm run prisma:seed` para gerar dados demo e senha temporária do administrador.
+4. Atualize o DNS para apontar para a URL fornecida pela Render, se necessário.
 
-   ```bash
-   cd backend
-   python app.py
-   ```
+## Power BI
+Conecte-se diretamente ao banco Postgres usando um usuário somente leitura. Utilize as views `dim_date`, `v_fct_sales`, `v_fct_production`, `v_fct_inventory`, `v_fct_expenses` e `v_fct_cashbook` para montar relatórios analíticos.
 
-   O servidor ficará disponível em `http://localhost:8000`.
+## Autenticação e Segurança
+- NextAuth com login por e-mail/senha, TOTP opcional e códigos de backup.
+- Bloqueio progressivo após tentativas de login falhas.
+- Proteções ativas: CSRF, CSP estrita, rate limit, cookies seguros, rotação de JWT.
+- Headers de segurança aplicados via middleware e `next.config.mjs`.
 
-5. **Acessar o frontend**
+### Habilitar TOTP
+1. Acesse `/settings` autenticado como administrador.
+2. Gere um segredo TOTP e escaneie o QR Code no aplicativo autenticador de sua preferência.
+3. Armazene os códigos de backup exibidos; eles permitem acesso mesmo sem o app autenticador.
+4. Confirme o token e salve as alterações.
 
-   Abra o navegador em `http://localhost:8000/`. A interface é responsiva e pode ser instalada como aplicativo (PWA) em celulares ou desktops.
+### Recuperação de senha
+- Usuários solicitam acesso em `/login` através do link "Esqueci minha senha".
+- Um e-mail é enviado com link temporário para redefinir a senha.
+- Após o primeiro login com senha temporária (seed), o sistema exige alteração imediata.
 
-## Endpoints principais
+## Fluxos principais
+- **Pedidos**: Cadastro completo com pipeline de status, integração WhatsApp e sincronização offline.
+- **Produção**: Planejamento e encerramento de lotes com baixa automática de insumos e controle de perdas.
+- **Estoque**: Controle de entradas, ajustes, alertas de estoque mínimo e sugestão de compras.
+- **Financeiro**: Caixa diário, registro de despesas, fechamento e exportação de relatórios.
+- **Relatórios**: Vendas e lucro mensal, mix de produtos, métodos de pagamento, clientes recorrentes e exportação CSV.
+- **Configurações**: Gestão de usuários, parâmetros de overhead, dados da empresa e conexão Power BI.
 
-| Método | Rota | Descrição |
-| ------ | ---- | --------- |
-| `GET` | `/api/clients` | Lista clientes cadastrados. |
-| `POST` | `/api/clients` | Cria um novo cliente. |
-| `PUT` | `/api/clients/:id` | Atualiza dados de um cliente. |
-| `DELETE` | `/api/clients/:id` | Remove um cliente. |
-| `POST` | `/api/deliveries` | Agenda uma entrega. |
-| `GET` | `/api/deliveries?date=AAAA-MM-DD` | Lista entregas (filtradas por data). |
-| `POST` | `/api/deliveries/:id/complete` | Marca entrega como concluída e registra quantidade. |
-| `POST` | `/api/routes` | Gera rota otimizada usando Google Directions (com fallback automático). |
-| `POST` | `/api/driver/location` | Registra localização do motorista, detecta paradas e retorna progresso. |
-| `GET` | `/api/driver/location` | Lista posições recentes do motorista e o status atual da rota. |
-| `GET` | `/api/config` | Retorna parâmetros públicos do frontend (como a chave do Google Maps). |
-| `GET` | `/api/metrics/summary` | Resumo com métricas de clientes, entregas e pães. |
+## PWA
+Aplicação é PWA com manifest e service worker que mantém formulários críticos offline (pedidos e fechamento de caixa). Ao reconectar, os dados são sincronizados automaticamente.
 
-## Funcionalidades em destaque
+### Sincronização offline
+- A criação de pedidos e fechamentos de caixa offline é armazenada via IndexedDB.
+- Ao voltar para o modo online, o service worker envia mensagem para sincronização automática.
 
-- Integração completa com Google Maps: autocomplete de endereços, seleção de ponto com marcador arrastável e visualização das rotas oficiais do Directions API.
-- Planejamento inteligente de rota com otimização pelo Google Directions e fallback local por vizinho mais próximo.
-- Rastreamento em tempo real do motorista: o mapa acompanha a posição atual, detecta paradas dentro do raio do cliente e solicita automaticamente o registro de pães entregues.
-- Mapa interativo (Google Maps) com destaque para o próximo destino, status da rota e clientes que ainda precisam ser atendidos.
-- Registro de entregas com quantidade de pães, observações e histórico de visitas detectadas.
-- Painel de métricas com gráfico (canvas) para visualizar pães entregues nos últimos dias.
-- PWA com manifesto e service worker para uso offline básico e instalação no celular.
-- Armazenamento seguro dos dados em banco SQLite local.
+## Logs e auditoria
+- Todas as ações sensíveis disparam registros em `AuditLog`.
+- Eventos de login/logout são registrados automaticamente.
+- Utilize um coletor compatível com JSON (ex.: Grafana Loki) para consumir os logs estruturados.
 
-## Próximos passos sugeridos
+## Scripts úteis
+- `npm run prisma:generate`
+- `npm run prisma:migrate`
+- `npm run prisma:seed`
 
-- Implementar autenticação por usuário/motorista (JWT ou sessão).
-- Evoluir o canal de atualização em tempo real para WebSockets/SSE e enviar notificações push.
-- Exportação de relatórios em CSV/planilhas diretamente do backend.
-- Integração com sistemas de pedidos e notificações automáticas aos clientes.
+## Licença
+[MIT](./LICENSE)

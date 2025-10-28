@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f97316" />
+      <stop offset="100%" stop-color="#fb923c" />
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="24" fill="#0f172a" />
+  <g transform="translate(20 28)">
+    <path d="M20 24c0-12 8-20 24-20s24 8 24 20c0 12-8 20-24 20S20 36 20 24z" fill="url(#grad)"/>
+    <path d="M16 44c0-10 12-14 28-14s28 4 28 14v4c0 8-8 12-28 12s-28-4-28-12z" fill="#fde68a"/>
+    <text x="44" y="72" text-anchor="middle" font-family="'Inter', sans-serif" font-size="18" fill="#f8fafc">pao</text>
+    <text x="44" y="92" text-anchor="middle" font-family="'Inter', sans-serif" font-size="18" fill="#f8fafc">do mauro</text>
+  </g>
+</svg>

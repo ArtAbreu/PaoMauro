@@ -1,4 +1,12 @@
-__pycache__/
-*.pyc
-backend/delivery.db
-node_modules/
+node_modules
+.next
+.env
+.env.local
+.env.production
+coverage
+.prisma
+.idea
+dist
+.DS_Store
+artifacts
+*.log
